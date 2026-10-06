@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art Engage</title>
+<style>
+  :root { --bg:#f7f5f0; --ink:#1c1c1c; --muted:#6b6b6b; --accent:#5b4a8a; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--ink); font-family:-apple-system, system-ui, "Segoe UI", sans-serif; padding:24px; }
+  .card { max-width:420px; width:100%; background:#fff; border-radius:16px; padding:32px 28px;
+          box-shadow:0 6px 30px rgba(0,0,0,.08); text-align:center; }
+  h1 { font-size:1.6rem; margin:0 0 8px; }
+  p { color:var(--muted); line-height:1.5; margin:0 0 12px; }
+  .ref { display:inline-block; margin-top:12px; padding:6px 12px; border-radius:999px;
+         background:#efeaf8; color:var(--accent); font-size:.85rem; font-weight:600; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <h1>Thanks for scanning</h1>
+    <p>Soon you'll be able to like, rate and comment on this artwork right here.</p>
+    <p>The full experience is being built now. Please check back shortly.</p>
+    <span class="ref" id="ref">Artwork</span>
+  </main>
+<script>
+  // Reads the artwork ID from addresses like /a/ART001
+  const m = location.pathname.match(/\/a\/([^\/]+)/);
+  if (m) document.getElementById('ref').textContent = 'Artwork ' + decodeURIComponent(m[1]);
+</script>
+</body>
+</html>
