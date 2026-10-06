@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.get('email', '').lower() == 'keith.morris@outlook.com';
+    }
+
+    // Artwork details: anyone can read, only the administrator can change
+    match /artworks/{artworkId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Visitor responses: one per visitor per artwork.
+    // Visitors can add or update their own; only the administrator can read or delete.
+    match /responses/{responseId} {
+
+      function validResponse() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt'])
+          && d.keys().hasAll(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt'])
+          && d.uid == request.auth.uid
+          && d.artworkId is string
+          && responseId == d.artworkId + '_' + request.auth.uid
+          && exists(/databases/$(database)/documents/artworks/$(d.artworkId))
+          && d.liked is bool
+          && d.rating is int && d.rating >= 0 && d.rating <= 5
+          && d.comment is string && d.comment.size() <= 1000
+          && d.submittedAt == request.time
+          && (d.liked || d.rating > 0 || d.comment.size() > 0);
+      }
+
+      allow create: if signedIn() && validResponse();
+      allow update: if signedIn() && resource.data.uid == request.auth.uid && validResponse();
+      allow read, delete: if isAdmin();
+    }
+  }
+}

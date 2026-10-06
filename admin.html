@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art Engage · Admin</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+  :root {
+    --bg: #f5f3ef; --card: #fff; --ink: #1d1b20; --muted: #6d6873; --line: #e4dfd6;
+    --accent: #5b3f8f; --accent-soft: #efe9f8; --heart: #c8324f; --star: #d39a1c; --danger: #a02828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: Inter, -apple-system, system-ui, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.5; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2 { font-family: Fraunces, Georgia, serif; font-weight: 500; margin: 0; }
+  [hidden] { display: none !important; }
+
+  .btn { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 8px 14px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: #cfc8bc; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .btn.danger { color: var(--danger); }
+  .link { background: none; border: 0; color: var(--accent); font-weight: 500; padding: 0; }
+
+  /* Login */
+  .login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  .login form { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 28px; }
+  .login h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  .login p { color: var(--muted); margin: 0 0 20px; }
+  label.f { display: block; font-weight: 500; font-size: 13px; margin: 12px 0 4px; }
+  input[type=text], input[type=email], input[type=password], input[type=url], select {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; background: #fff;
+  }
+  input:focus, select:focus { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+  .login .btn.primary { width: 100%; margin-top: 18px; padding: 11px; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
+
+  /* Layout */
+  header.top { background: #1d1a22; color: #fff; }
+  header.top .in { max-width: 1100px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  header.top h1 { font-size: 1.3rem; flex: 1; }
+  header.top .who { color: #b9b3c2; font-size: 13px; }
+  header.top .btn { background: transparent; color: #fff; border-color: #4a4553; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { color: var(--muted); font-size: 13px; }
+  .tile .v { font-family: Fraunces, Georgia, serif; font-size: 1.9rem; line-height: 1.2; }
+
+  section.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-top: 20px; overflow: hidden; }
+  .panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: 1.2rem; flex: 1; }
+  .panel-head select { width: auto; min-width: 200px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: #faf8f5; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  tr.sel td { background: var(--accent-soft); }
+  .art { display: flex; align-items: center; gap: 10px; }
+  .art img { width: 36px; height: 44px; object-fit: cover; border-radius: 4px; background: #ddd; }
+  .art .id { color: var(--muted); font-size: 12px; }
+  .actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .inactive { font-size: 11px; background: #eee; color: var(--muted); border-radius: 99px; padding: 1px 7px; margin-left: 6px; }
+
+  .resp { padding: 14px 18px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .resp:last-child { border-bottom: 0; }
+  .resp .line1 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .resp .line1 b { color: var(--ink); font-weight: 600; }
+  .resp .heart { color: var(--heart); }
+  .resp .stars { color: var(--star); letter-spacing: 1px; }
+  .resp .comment { grid-column: 1 / -1; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .resp .nocomment { grid-column: 1 / -1; color: #aaa; font-size: 13px; font-style: italic; }
+  .empty { padding: 30px 18px; color: var(--muted); text-align: center; }
+
+  /* Dialogs */
+  dialog { border: 0; border-radius: 14px; padding: 0; width: min(460px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(20,18,24,.45); }
+  dialog form, dialog .body { padding: 22px; }
+  dialog h2 { font-size: 1.3rem; margin-bottom: 4px; }
+  dialog .hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  #qrCanvas { display: block; margin: 14px auto; width: 240px; height: 240px; image-rendering: pixelated; }
+  .qrurl { text-align: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; word-break: break-all; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login" id="loginView" hidden>
+  <form id="loginForm">
+    <h1>Art Engage</h1>
+    <p>Administrator sign in</p>
+    <label class="f" for="email">Email</label>
+    <input type="email" id="email" autocomplete="username" required>
+    <label class="f" for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button class="btn primary" type="submit">Sign in</button>
+    <div class="err" id="loginErr" hidden></div>
+  </form>
+</div>
+
+<!-- Dashboard -->
+<div id="dashView" hidden>
+  <header class="top"><div class="in">
+    <h1>Art Engage · Admin</h1>
+    <span class="who" id="who"></span>
+    <button class="btn small" id="refresh">Refresh</button>
+    <button class="btn small" id="signout">Sign out</button>
+  </div></header>
+
+  <main>
+    <div class="tiles">
+      <div class="tile"><div class="k">Responses</div><div class="v" id="tResp">–</div></div>
+      <div class="tile"><div class="k">Visitors</div><div class="v" id="tVis">–</div></div>
+      <div class="tile"><div class="k">Likes</div><div class="v" id="tLikes">–</div></div>
+      <div class="tile"><div class="k">Average rating</div><div class="v" id="tAvg">–</div></div>
+      <div class="tile"><div class="k">Comments</div><div class="v" id="tCom">–</div></div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Artworks</h2>
+        <button class="btn primary" id="addArt">Add artwork</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Artwork</th><th class="num">Responses</th><th class="num">Likes</th>
+            <th class="num">Avg rating</th><th class="num">Comments</th><th></th>
+          </tr></thead>
+          <tbody id="artRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="artEmpty" hidden>No artworks yet. Click <b>Add artwork</b> to set up your first one.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Responses</h2>
+        <select id="filter" aria-label="Filter by artwork"></select>
+        <button class="btn" id="csv">Download CSV</button>
+      </div>
+      <div id="respList"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Artwork dialog -->
+<dialog id="artDialog">
+  <form id="artForm" method="dialog">
+    <h2 id="artDialogTitle">Add artwork</h2>
+    <label class="f" for="fId">Artwork ID</label>
+    <input type="text" id="fId" required pattern="[A-Za-z0-9_-]{1,40}" placeholder="ART001">
+    <div class="hint">Letters, numbers, - and _ only. This goes into the QR code and can't be changed later.</div>
+    <label class="f" for="fTitle">Title</label>
+    <input type="text" id="fTitle" required>
+    <label class="f" for="fArtist">Artist</label>
+    <input type="text" id="fArtist">
+    <label class="f" for="fYear">Date</label>
+    <input type="text" id="fYear" placeholder="e.g. 1958">
+    <label class="f" for="fImage">Image address</label>
+    <input type="text" id="fImage" placeholder="/images/ART001.jpg">
+    <div class="hint">A file in your project's images folder, or a full web address.</div>
+    <label class="f" for="fMore">"More about this work" link (optional)</label>
+    <input type="url" id="fMore" placeholder="https://…">
+    <label class="check"><input type="checkbox" id="fActive" checked> Accepting responses</label>
+    <div class="err" id="artErr" hidden></div>
+    <div class="buttons">
+      <button class="btn" type="button" id="artCancel">Cancel</button>
+      <button class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- QR dialog -->
+<dialog id="qrDialog">
+  <div class="body">
+    <h2 id="qrTitle">QR code</h2>
+    <canvas id="qrCanvas"></canvas>
+    <div class="qrurl" id="qrUrl"></div>
+    <div class="buttons">
+      <button class="btn" type="button" id="qrClose">Close</button>
+      <button class="btn" type="button" id="qrPrint">Print label</button>
+      <button class="btn primary" type="button" id="qrDownload">Download PNG</button>
+    </div>
+  </div>
+</dialog>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCHq1L08Hog9LbOrKIpoLej8K1bnYixCSg",
+    authDomain: "art-engage.firebaseapp.com",
+    projectId: "art-engage",
+    storageBucket: "art-engage.firebasestorage.app",
+    messagingSenderId: "1090220532946",
+    appId: "1:1090220532946:web:c65ed3cb77f6a19abb390b"
+  };
+  const ADMIN_EMAIL = "keith.morris@outlook.com";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+  let artworks = [];      // [{id, title, ...}]
+  let responses = [];     // [{id, artworkId, liked, rating, comment, date}]
+  let selected = "";      // artwork filter ("" = all)
+  let editingId = null;
+
+  // ---------- Auth ----------
+  onAuthStateChanged(auth, (user) => {
+    const isAdmin = user && !user.isAnonymous && (user.email || "").toLowerCase() === ADMIN_EMAIL;
+    if (isAdmin) {
+      $("who").textContent = user.email;
+      $("loginView").hidden = true;
+      $("dashView").hidden = false;
+      loadAll();
+    } else {
+      $("dashView").hidden = true;
+      $("loginView").hidden = false;
+      if (user && !user.isAnonymous) {
+        $("loginErr").textContent = "This account isn't an administrator.";
+        $("loginErr").hidden = false;
+      }
+    }
+  });
+
+  $("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("loginErr").hidden = true;
+    try {
+      await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+    } catch (err) {
+      $("loginErr").textContent = "Sign in failed. Please check your email and password.";
+      $("loginErr").hidden = false;
+    }
+  });
+  $("signout").addEventListener("click", () => signOut(auth));
+  $("refresh").addEventListener("click", loadAll);
+
+  // ---------- Data ----------
+  async function loadAll() {
+    $("respList").innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const [aSnap, rSnap] = await Promise.all([
+        getDocs(collection(db, "artworks")),
+        getDocs(query(collection(db, "responses"), orderBy("submittedAt", "desc")))
+      ]);
+      artworks = aSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.id.localeCompare(b.id));
+      responses = rSnap.docs.map(d => {
+        const r = d.data();
+        return { id: d.id, ...r, date: r.submittedAt ? r.submittedAt.toDate() : null };
+      });
+      render();
+    } catch (err) {
+      console.error(err);
+      $("respList").innerHTML = '<div class="empty">Couldn\'t load data. Have the security rules been published in Firebase?</div>';
+    }
+  }
+
+  function stats(list) {
+    const rated = list.filter(r => r.rating > 0);
+    return {
+      count: list.length,
+      visitors: new Set(list.map(r => r.uid)).size,
+      likes: list.filter(r => r.liked).length,
+      avg: rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : null,
+      comments: list.filter(r => r.comment && r.comment.trim()).length
+    };
+  }
+
+  // ---------- Rendering ----------
+  function render() {
+    const s = stats(responses);
+    $("tResp").textContent = s.count;
+    $("tVis").textContent = s.visitors;
+    $("tLikes").textContent = s.likes;
+    $("tAvg").textContent = s.avg == null ? "–" : s.avg.toFixed(1) + " ★";
+    $("tCom").textContent = s.comments;
+
+    // Artwork table
+    $("artEmpty").hidden = artworks.length > 0;
+    $("artRows").innerHTML = artworks.map(a => {
+      const st = stats(responses.filter(r => r.artworkId === a.id));
+      return `<tr class="${selected === a.id ? "sel" : ""}">
+        <td><div class="art">
+          ${a.imageUrl ? `<img src="${esc(a.imageUrl)}" alt="">` : ""}
+          <div><div>${esc(a.title || a.id)}${a.active === false ? '<span class="inactive">paused</span>' : ""}</div>
+          <div class="id">${esc(a.id)}${a.artist ? " · " + esc(a.artist) : ""}</div></div>
+        </div></td>
+        <td class="num">${st.count}</td>
+        <td class="num">${st.likes}</td>
+        <td class="num">${st.avg == null ? "–" : st.avg.toFixed(1)}</td>
+        <td class="num">${st.comments}</td>
+        <td><div class="actions">
+          <button class="btn small" data-act="view" data-id="${esc(a.id)}">Responses</button>
+          <button class="btn small" data-act="qr" data-id="${esc(a.id)}">QR</button>
+          <button class="btn small" data-act="edit" data-id="${esc(a.id)}">Edit</button>
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    // Filter dropdown
+    $("filter").innerHTML = `<option value="">All artworks</option>` +
+      artworks.map(a => `<option value="${esc(a.id)}">${esc(a.id)} – ${esc(a.title || "")}</option>`).join("");
+    $("filter").value = selected;
+
+    // Responses list
+    const list = filtered();
+    if (!list.length) {
+      $("respList").innerHTML = '<div class="empty">No responses yet.</div>';
+      return;
+    }
+    const titleOf = (id) => (artworks.find(a => a.id === id) || {}).title || id;
+    $("respList").innerHTML = list.map(r => `
+      <div class="resp">
+        <div class="line1">
+          <b>${esc(titleOf(r.artworkId))}</b>
+          <span>${r.date ? r.date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : ""}</span>
+          ${r.liked ? '<span class="heart">♥ Liked</span>' : ""}
+          ${r.rating ? `<span class="stars" title="${r.rating} of 5">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>` : ""}
+        </div>
+        <button class="btn small danger" data-act="delete" data-id="${esc(r.id)}">Delete</button>
+        ${r.comment ? `<div class="comment">${esc(r.comment)}</div>` : '<div class="nocomment">No comment</div>'}
+      </div>`).join("");
+  }
+
+  function filtered() {
+    return selected ? responses.filter(r => r.artworkId === selected) : responses;
+  }
+
+  // ---------- Actions ----------
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const id = b.dataset.id;
+    if (b.dataset.act === "view") {
+      selected = selected === id ? "" : id;
+      render();
+      $("respList").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (b.dataset.act === "edit") openArtDialog(artworks.find(a => a.id === id));
+    if (b.dataset.act === "qr") openQr(artworks.find(a => a.id === id));
+    if (b.dataset.act === "delete") {
+      if (!confirm("Delete this response? This can't be undone.")) return;
+      try {
+        await deleteDoc(doc(db, "responses", id));
+        responses = responses.filter(r => r.id !== id);
+        render();
+      } catch (err) { alert("Couldn't delete: " + err.message); }
+    }
+  });
+
+  $("filter").addEventListener("change", (e) => { selected = e.target.value; render(); });
+
+  // ---------- Artwork add/edit ----------
+  $("addArt").addEventListener("click", () => openArtDialog(null));
+  $("artCancel").addEventListener("click", () => $("artDialog").close());
+
+  function openArtDialog(a) {
+    editingId = a ? a.id : null;
+    $("artDialogTitle").textContent = a ? "Edit artwork" : "Add artwork";
+    $("fId").value = a ? a.id : nextId();
+    $("fId").disabled = !!a;
+    $("fTitle").value = a?.title || "";
+    $("fArtist").value = a?.artist || "";
+    $("fYear").value = a?.year || "";
+    $("fImage").value = a?.imageUrl || "";
+    $("fMore").value = a?.moreInfoUrl || "";
+    $("fActive").checked = a ? a.active !== false : true;
+    $("artErr").hidden = true;
+    $("artDialog").showModal();
+  }
+
+  function nextId() {
+    const nums = artworks.map(a => parseInt((a.id.match(/^ART(\d+)$/) || [])[1], 10)).filter(n => !isNaN(n));
+    const n = (nums.length ? Math.max(...nums) : 0) + 1;
+    return "ART" + String(n).padStart(3, "0");
+  }
+
+  $("artForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = editingId || $("fId").value.trim();
+    if (!editingId && artworks.some(a => a.id === id)) {
+      $("artErr").textContent = "That ID is already in use.";
+      $("artErr").hidden = false;
+      return;
+    }
+    const data = {
+      title: $("fTitle").value.trim(),
+      artist: $("fArtist").value.trim(),
+      year: $("fYear").value.trim(),
+      imageUrl: $("fImage").value.trim(),
+      moreInfoUrl: $("fMore").value.trim(),
+      active: $("fActive").checked
+    };
+    try {
+      await setDoc(doc(db, "artworks", id), data);
+      $("artDialog").close();
+      await loadAll();
+    } catch (err) {
+      $("artErr").textContent = "Couldn't save: " + err.message;
+      $("artErr").hidden = false;
+    }
+  });
+
+  // ---------- QR codes ----------
+  let qrArtwork = null;
+  const artUrl = (id) => location.origin + "/a/" + encodeURIComponent(id);
+
+  function drawQr(canvas, text, size) {
+    const qr = qrcode(0, "M");
+    qr.addData(text);
+    qr.make();
+    const n = qr.getModuleCount(), quiet = 4, cell = Math.floor(size / (n + quiet * 2));
+    const px = cell * (n + quiet * 2);
+    canvas.width = canvas.height = px;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, px, px);
+    ctx.fillStyle = "#000";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
+    return canvas;
+  }
+
+  function openQr(a) {
+    qrArtwork = a;
+    $("qrTitle").textContent = a.title || a.id;
+    $("qrUrl").textContent = artUrl(a.id);
+    drawQr($("qrCanvas"), artUrl(a.id), 1200);
+    $("qrDialog").showModal();
+  }
+  $("qrClose").addEventListener("click", () => $("qrDialog").close());
+
+  $("qrDownload").addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.download = `QR-${qrArtwork.id}.png`;
+    link.href = $("qrCanvas").toDataURL("image/png");
+    link.click();
+  });
+
+  $("qrPrint").addEventListener("click", () => {
+    const img = $("qrCanvas").toDataURL("image/png");
+    const a = qrArtwork;
+    const w = window.open("", "_blank");
+    w.document.write(`<!doctype html><html><head><title>Label ${esc(a.id)}</title>
+      <style>
+        @page { size: A6 portrait; margin: 0; }
+        body { margin: 0; font-family: Helvetica, Arial, sans-serif; color: #1d1b20; }
+        .label { width: 105mm; height: 148mm; padding: 10mm; box-sizing: border-box; display: flex; flex-direction: column; }
+        h1 { font-size: 22pt; margin: 0 0 2mm; }
+        p { margin: 0; color: #555; font-size: 11pt; }
+        img { width: 70mm; height: 70mm; margin: 8mm auto 6mm; display: block; }
+        .foot { border-top: 1px solid #ddd; padding-top: 3mm; margin-top: auto; font-size: 9pt; }
+        .foot b { display: block; font-size: 10pt; letter-spacing: .04em; color: #1d1b20; }
+      </style></head><body><div class="label">
+        <h1>What do you think?</h1>
+        <p>Like, rate or comment on<br>${esc(a.title || "this artwork")}${a.artist ? "<br>" + esc(a.artist) : ""}</p>
+        <img src="${img}" alt="QR code">
+        <div class="foot"><b>SCAN WITH YOUR PHONE CAMERA</b>No app needed · Ref ${esc(a.id)}</div>
+      </div><script>window.onload = () => setTimeout(() => window.print(), 300);<\/script></body></html>`);
+    w.document.close();
+  });
+
+  // ---------- CSV ----------
+  $("csv").addEventListener("click", () => {
+    const art = Object.fromEntries(artworks.map(a => [a.id, a]));
+    const cell = (v) => {
+      const s = String(v ?? "");
+      return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const pad = (n) => String(n).padStart(2, "0");
+    const fmt = (d) => d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
+    const header = ["artwork_id", "title", "artist", "submitted", "liked", "rating", "comment", "comment_length", "visitor"];
+    const rows = filtered().map(r => [
+      r.artworkId,
+      art[r.artworkId]?.title || "",
+      art[r.artworkId]?.artist || "",
+      fmt(r.date),
+      r.liked ? 1 : 0,
+      r.rating || "",
+      r.comment || "",
+      (r.comment || "").length,
+      (r.uid || "").slice(0, 8)
+    ]);
+    const csv = "﻿" + [header, ...rows].map(row => row.map(cell).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    const d = new Date();
+    link.download = `art-engage-${selected || "all"}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
+</script>
+</body>
+</html>

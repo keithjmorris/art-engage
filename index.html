@@ -2,32 +2,381 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Art Engage</title>
+<meta name="theme-color" content="#16141a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#f7f5f0; --ink:#1c1c1c; --muted:#6b6b6b; --accent:#5b4a8a; }
-  * { box-sizing:border-box; }
-  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-         background:var(--bg); color:var(--ink); font-family:-apple-system, system-ui, "Segoe UI", sans-serif; padding:24px; }
-  .card { max-width:420px; width:100%; background:#fff; border-radius:16px; padding:32px 28px;
-          box-shadow:0 6px 30px rgba(0,0,0,.08); text-align:center; }
-  h1 { font-size:1.6rem; margin:0 0 8px; }
-  p { color:var(--muted); line-height:1.5; margin:0 0 12px; }
-  .ref { display:inline-block; margin-top:12px; padding:6px 12px; border-radius:999px;
-         background:#efeaf8; color:var(--accent); font-size:.85rem; font-weight:600; }
+  :root {
+    --dark: #16141a;
+    --paper: #f7f4ee;
+    --card: #ffffff;
+    --ink: #1d1b20;
+    --muted: #6d6873;
+    --line: #e6e1d8;
+    --accent: #5b3f8f;
+    --accent-soft: #efe9f8;
+    --heart: #c8324f;
+    --star: #d39a1c;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Inter, -apple-system, system-ui, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* Artwork header */
+  .hero {
+    background: var(--dark);
+    padding: 28px 20px 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .hero img {
+    display: block;
+    max-width: 100%;
+    max-height: 52vh;
+    object-fit: contain;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  }
+  .hero .placeholder {
+    width: 160px; height: 200px;
+    border: 1px solid #3a3640;
+    display: grid; place-items: center;
+    color: #8c8794; font-size: 13px;
+  }
+
+  main { max-width: 520px; margin: 0 auto; padding: 22px 16px 48px; }
+
+  .meta h1 {
+    font-family: Fraunces, Georgia, serif;
+    font-weight: 600;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    margin: 0 0 4px;
+  }
+  .meta .artist { color: var(--muted); margin: 0; }
+  .meta .more {
+    display: inline-block; margin-top: 10px;
+    color: var(--accent); font-weight: 500; text-decoration: none;
+  }
+  .meta .more:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 22px;
+  }
+  .card h2 {
+    font-family: Fraunces, Georgia, serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    margin: 0 0 4px;
+  }
+  .card .sub { color: var(--muted); margin: 0 0 18px; font-size: .95rem; }
+
+  .row { padding: 14px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; padding-top: 0; }
+  .label { font-weight: 600; font-size: .9rem; margin-bottom: 10px; display: block; }
+
+  /* Like */
+  .like {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1.5px solid var(--line); background: #fff;
+    border-radius: 999px; padding: 10px 18px 10px 14px;
+    font-weight: 500;
+    transition: border-color .15s, background .15s;
+  }
+  .like svg { width: 24px; height: 24px; fill: none; stroke: var(--muted); stroke-width: 2; transition: transform .2s; }
+  .like[aria-pressed="true"] { border-color: var(--heart); background: #fdf0f2; }
+  .like[aria-pressed="true"] svg { fill: var(--heart); stroke: var(--heart); transform: scale(1.12); }
+
+  /* Stars */
+  .stars { display: flex; gap: 6px; }
+  .star {
+    background: none; border: 0; padding: 4px;
+    min-width: 44px; min-height: 44px;
+    display: grid; place-items: center;
+  }
+  .star svg { width: 34px; height: 34px; fill: none; stroke: #c9c3ba; stroke-width: 1.6; transition: transform .15s; }
+  .star.on svg { fill: var(--star); stroke: var(--star); }
+  .star:active svg { transform: scale(.9); }
+  .hint { color: var(--muted); font-size: .85rem; margin-top: 4px; min-height: 1.2em; }
+
+  /* Comment */
+  textarea {
+    width: 100%; min-height: 110px; resize: vertical;
+    border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 12px; font: inherit; color: var(--ink); background: #fff;
+  }
+  textarea:focus, .like:focus-visible, .star:focus-visible, .primary:focus-visible {
+    outline: 3px solid var(--accent-soft); outline-offset: 2px; border-color: var(--accent);
+  }
+  .count { text-align: right; color: var(--muted); font-size: .8rem; margin-top: 4px; }
+
+  .primary {
+    width: 100%; margin-top: 18px;
+    background: var(--accent); color: #fff; border: 0;
+    border-radius: 12px; padding: 15px; font-weight: 600; font-size: 1rem;
+    transition: opacity .15s;
+  }
+  .primary:disabled { opacity: .4; cursor: default; }
+  .secondary {
+    background: none; border: 0; color: var(--accent);
+    font-weight: 500; padding: 8px 0; margin-top: 8px;
+  }
+
+  .privacy { color: var(--muted); font-size: .8rem; margin-top: 18px; text-align: center; }
+  .error { color: #a02828; font-size: .9rem; margin-top: 10px; }
+
+  .thanks { text-align: center; padding: 10px 0; }
+  .thanks .tick {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; margin: 0 auto 12px;
+  }
+  .thanks .tick svg { width: 28px; height: 28px; }
+
+  .notice { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .notice h1 { font-family: Fraunces, Georgia, serif; color: var(--ink); font-weight: 500; }
+
+  .loading { text-align: center; padding: 80px 20px; color: var(--muted); }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-  <main class="card">
-    <h1>Thanks for scanning</h1>
-    <p>Soon you'll be able to like, rate and comment on this artwork right here.</p>
-    <p>The full experience is being built now. Please check back shortly.</p>
-    <span class="ref" id="ref">Artwork</span>
+
+<div id="loading" class="loading">Loading…</div>
+
+<div id="notFound" class="notice" hidden>
+  <h1 id="nfTitle">Artwork not found</h1>
+  <p id="nfText">This code isn't linked to an artwork yet. Please let a member of staff know.</p>
+</div>
+
+<div id="app" hidden>
+  <header class="hero" id="hero"></header>
+  <main>
+    <section class="meta">
+      <h1 id="title"></h1>
+      <p class="artist" id="artist"></p>
+      <a class="more" id="more" target="_blank" rel="noopener" hidden>More about this work →</a>
+    </section>
+
+    <section class="card" id="formCard">
+      <h2>What do you think?</h2>
+      <p class="sub">Do as much or as little as you like.</p>
+
+      <div class="row">
+        <button class="like" id="like" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 8 3.4 4.5 6.9 4.5c2 0 3.5 1.1 5.1 3 1.6-1.9 3.1-3 5.1-3 3.5 0 5.5 3.5 4.2 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>
+          <span id="likeText">I like this</span>
+        </button>
+      </div>
+
+      <div class="row">
+        <span class="label" id="ratingLabel">Your rating</span>
+        <div class="stars" id="stars" role="radiogroup" aria-labelledby="ratingLabel"></div>
+        <div class="hint" id="ratingHint"></div>
+      </div>
+
+      <div class="row">
+        <label class="label" for="comment">Your thoughts</label>
+        <textarea id="comment" maxlength="1000" placeholder="What does this work make you think or feel?"></textarea>
+        <div class="count"><span id="count">0</span> / 1000</div>
+      </div>
+
+      <button class="primary" id="send" type="button" disabled>Send</button>
+      <div class="error" id="error" hidden></div>
+    </section>
+
+    <section class="card thanks" id="thanksCard" hidden>
+      <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2>Thank you</h2>
+      <p class="sub" style="margin-bottom:0">Your response has been recorded.</p>
+      <button class="secondary" id="edit" type="button">Change my response</button>
+    </section>
+
+    <p class="privacy">Responses are anonymous. We don't ask for your name or email.</p>
   </main>
-<script>
-  // Reads the artwork ID from addresses like /a/ART001
-  const m = location.pathname.match(/\/a\/([^\/]+)/);
-  if (m) document.getElementById('ref').textContent = 'Artwork ' + decodeURIComponent(m[1]);
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCHq1L08Hog9LbOrKIpoLej8K1bnYixCSg",
+    authDomain: "art-engage.firebaseapp.com",
+    projectId: "art-engage",
+    storageBucket: "art-engage.firebasestorage.app",
+    messagingSenderId: "1090220532946",
+    appId: "1:1090220532946:web:c65ed3cb77f6a19abb390b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const $ = (id) => document.getElementById(id);
+  const RATING_WORDS = ["", "Not for me", "It's OK", "I like it", "I really like it", "I love it"];
+
+  // Artwork ID from /a/ART001 (or ?a=ART001)
+  const match = location.pathname.match(/\/a\/([^\/?#]+)/);
+  const artworkId = match ? decodeURIComponent(match[1]) : new URLSearchParams(location.search).get("a");
+
+  const state = { liked: false, rating: 0, comment: "" };
+  const storageKey = "artengage:" + artworkId;
+
+  function show(id) {
+    for (const s of ["loading", "notFound", "app"]) $(s).hidden = (s !== id);
+  }
+
+  function loadSaved() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (saved) Object.assign(state, saved);
+      return !!saved;
+    } catch { return false; }
+  }
+  function saveLocal() {
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch {}
+  }
+
+  // ---------- Rendering ----------
+  function renderArtwork(a) {
+    document.title = (a.title || artworkId) + " · Art Engage";
+    $("title").textContent = a.title || "Artwork " + artworkId;
+    $("artist").textContent = [a.artist, a.year].filter(Boolean).join(", ");
+    if (a.moreInfoUrl) { $("more").href = a.moreInfoUrl; $("more").hidden = false; }
+
+    const hero = $("hero");
+    if (a.imageUrl) {
+      const img = document.createElement("img");
+      img.src = a.imageUrl;
+      img.alt = a.title ? "Image of " + a.title : "Artwork image";
+      hero.appendChild(img);
+    } else {
+      hero.innerHTML = '<div class="placeholder">No image</div>';
+    }
+  }
+
+  const starPath = "M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z";
+  function buildStars() {
+    const wrap = $("stars");
+    for (let i = 1; i <= 5; i++) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "star";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-label", i + " star" + (i > 1 ? "s" : "") + " – " + RATING_WORDS[i]);
+      b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${starPath}" stroke-linejoin="round"/></svg>`;
+      b.addEventListener("click", () => {
+        state.rating = (state.rating === i) ? 0 : i;   // tap again to clear
+        renderControls();
+      });
+      wrap.appendChild(b);
+    }
+  }
+
+  function renderControls() {
+    $("like").setAttribute("aria-pressed", String(state.liked));
+    $("likeText").textContent = state.liked ? "You like this" : "I like this";
+    [...$("stars").children].forEach((b, idx) => {
+      const on = idx < state.rating;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-checked", String(idx + 1 === state.rating));
+    });
+    $("ratingHint").textContent = state.rating ? RATING_WORDS[state.rating] : "Tap a star";
+    $("count").textContent = state.comment.length;
+    $("send").disabled = !(state.liked || state.rating > 0 || state.comment.trim().length > 0);
+  }
+
+  // ---------- Events ----------
+  $("like").addEventListener("click", () => { state.liked = !state.liked; renderControls(); });
+  $("comment").addEventListener("input", (e) => { state.comment = e.target.value; renderControls(); });
+  $("edit").addEventListener("click", () => {
+    $("thanksCard").hidden = true;
+    $("formCard").hidden = false;
+    $("send").textContent = "Update my response";
+  });
+
+  $("send").addEventListener("click", async () => {
+    const btn = $("send");
+    $("error").hidden = true;
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = "Sending…";
+    try {
+      const user = auth.currentUser || (await signInAnonymously(auth)).user;
+      await setDoc(doc(db, "responses", artworkId + "_" + user.uid), {
+        artworkId,
+        uid: user.uid,
+        liked: state.liked,
+        rating: state.rating,
+        comment: state.comment.trim().slice(0, 1000),
+        submittedAt: serverTimestamp()
+      });
+      saveLocal();
+      $("formCard").hidden = true;
+      $("thanksCard").hidden = false;
+    } catch (err) {
+      console.error(err);
+      $("error").textContent = "Sorry, that didn't send. Please check your connection and try again.";
+      $("error").hidden = false;
+    } finally {
+      btn.textContent = original;
+      renderControls();
+    }
+  });
+
+  // ---------- Start ----------
+  async function start() {
+    if (!artworkId) {
+      $("nfTitle").textContent = "Welcome";
+      $("nfText").textContent = "Scan the QR code next to an artwork to share your thoughts on it.";
+      show("notFound");
+      return;
+    }
+    try {
+      const snap = await getDoc(doc(db, "artworks", artworkId));
+      if (!snap.exists() || snap.data().active === false) { show("notFound"); return; }
+      renderArtwork(snap.data());
+      buildStars();
+      const hadSaved = loadSaved();
+      $("comment").value = state.comment;
+      renderControls();
+      if (hadSaved) {
+        $("formCard").hidden = true;
+        $("thanksCard").hidden = false;
+        $("send").textContent = "Update my response";
+      }
+      show("app");
+    } catch (err) {
+      console.error(err);
+      $("nfTitle").textContent = "Something went wrong";
+      $("nfText").textContent = "Please check your connection and try again.";
+      show("notFound");
+    }
+  }
+
+  // Wait for any existing sign-in to be restored, then sign in anonymously if needed
+  const stop = onAuthStateChanged(auth, async (user) => {
+    stop();
+    if (!user) { try { await signInAnonymously(auth); } catch (e) { console.error(e); } }
+  });
+  start();
 </script>
 </body>
 </html>
