@@ -34,6 +34,16 @@
   }
   button { font: inherit; color: inherit; cursor: pointer; }
 
+  /* Logo strip */
+  .brand {
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .brand img { display: block; height: 44px; width: auto; }
+
   /* Artwork header */
   .hero {
     background: var(--dark);
@@ -157,6 +167,10 @@
 </head>
 <body>
 
+<div class="brand">
+  <img src="/images/logo.png" alt="Contemporary Art Society">
+</div>
+
 <div id="loading" class="loading">Loading…</div>
 
 <div id="notFound" class="notice" hidden>
@@ -268,7 +282,7 @@
       img.alt = a.title ? "Image of " + a.title : "Artwork image";
       hero.appendChild(img);
     } else {
-      hero.innerHTML = '<div class="placeholder">No image</div>';
+      hero.hidden = true;   // no image set for this artwork: skip the dark band entirely
     }
   }
 
