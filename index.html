@@ -75,6 +75,7 @@
     margin: 0 0 4px;
   }
   .meta .artist { color: var(--muted); margin: 0; }
+  .meta .museum { color: var(--muted); font-size: .85rem; margin: 4px 0 0; }
   .meta .more {
     display: inline-block; margin-top: 10px;
     color: var(--accent); font-weight: 500; text-decoration: none;
@@ -184,6 +185,7 @@
     <section class="meta">
       <h1 id="title"></h1>
       <p class="artist" id="artist"></p>
+      <p class="museum" id="museum" hidden></p>
       <a class="more" id="more" target="_blank" rel="noopener" hidden>More about this work →</a>
     </section>
 
@@ -273,13 +275,15 @@
     document.title = (a.title || artworkId) + " · Art Engage";
     $("title").textContent = a.title || "Artwork " + artworkId;
     $("artist").textContent = [a.artist, a.year].filter(Boolean).join(", ");
+    if (a.museum) { $("museum").textContent = a.museum; $("museum").hidden = false; }
     if (a.moreInfoUrl) { $("more").href = a.moreInfoUrl; $("more").hidden = false; }
 
     const hero = $("hero");
     if (a.imageUrl) {
       const img = document.createElement("img");
+      img.onerror = () => { hero.hidden = true; };   // image missing or moved: drop the band rather than show a broken picture
       img.src = a.imageUrl;
-      img.alt = a.title ? "Image of " + a.title : "Artwork image";
+      img.alt = a.imageAlt || (a.title ? "Image of " + a.title : "Artwork image");
       hero.appendChild(img);
     } else {
       hero.hidden = true;   // no image set for this artwork: skip the dark band entirely

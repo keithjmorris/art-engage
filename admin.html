@@ -90,7 +90,13 @@
   dialog h2 { font-size: 1.3rem; margin-bottom: 4px; }
   dialog .hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
   dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  #artForm .buttons { position: sticky; bottom: -22px; background: #fff; margin: 20px -22px -22px; padding: 14px 22px; border-top: 1px solid var(--line); }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .lookup { display: flex; gap: 8px; }
+  .lookup input { flex: 1; }
+  .found { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 10px; background: var(--accent-soft); border-radius: 10px; font-size: 13px; }
+  .found img { width: 48px; height: 60px; object-fit: cover; border-radius: 4px; background: #ddd; }
+  .found.err { background: #fbecec; color: var(--danger); }
   #qrCanvas { display: block; margin: 14px auto; width: 240px; height: 240px; image-rendering: pixelated; }
   .qrurl { text-align: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; word-break: break-all; color: var(--muted); }
 </style>
@@ -161,23 +167,30 @@
 <dialog id="artDialog">
   <form id="artForm" method="dialog">
     <h2 id="artDialogTitle">Add artwork</h2>
-    <label class="f" for="fId">Artwork ID</label>
-    <input type="text" id="fId" required pattern="[A-Za-z0-9_-]{1,40}" placeholder="ART001">
-    <div class="hint">Letters, numbers, - and _ only. This goes into the QR code and can't be changed later.</div>
+    <label class="f" for="fId">Catalogue number</label>
+    <div class="lookup">
+      <input type="text" id="fId" required pattern="[A-Za-z0-9_-]{1,40}" placeholder="e.g. 8076" inputmode="numeric">
+      <button class="btn" type="button" id="lookup">Look up</button>
+    </div>
+    <div class="hint" id="idHint">The number from the CAS website (contemporaryartsociety.org/node/<b>8076</b>). It goes into the QR code and can't be changed later.</div>
+    <div class="found" id="found" hidden></div>
     <label class="f" for="fTitle">Title</label>
     <input type="text" id="fTitle" required>
     <label class="f" for="fArtist">Artist</label>
     <input type="text" id="fArtist">
     <label class="f" for="fYear">Date</label>
     <input type="text" id="fYear" placeholder="e.g. 1958">
+    <label class="f" for="fMuseum">Museum</label>
+    <input type="text" id="fMuseum">
     <label class="f" for="fImage">Image address</label>
-    <input type="text" id="fImage" placeholder="/images/ART001.jpg">
-    <div class="hint">A file in your project's images folder, or a full web address.</div>
+    <input type="text" id="fImage" placeholder="Leave blank to show no picture">
+    <div class="hint">Filled in from the catalogue. Clear it to show no picture.</div>
     <label class="f" for="fMore">"More about this work" link (optional)</label>
     <input type="url" id="fMore" placeholder="https://…">
     <label class="check"><input type="checkbox" id="fActive" checked> Accepting responses</label>
     <div class="err" id="artErr" hidden></div>
     <div class="buttons">
+      <button class="btn danger" type="button" id="artDelete" style="margin-right:auto" hidden>Delete</button>
       <button class="btn" type="button" id="artCancel">Cancel</button>
       <button class="btn primary" type="submit">Save</button>
     </div>
@@ -375,26 +388,83 @@
   $("addArt").addEventListener("click", () => openArtDialog(null));
   $("artCancel").addEventListener("click", () => $("artDialog").close());
 
+  let looked = {};   // extra catalogue details from the last lookup
+
   function openArtDialog(a) {
     editingId = a ? a.id : null;
+    looked = {};
     $("artDialogTitle").textContent = a ? "Edit artwork" : "Add artwork";
-    $("fId").value = a ? a.id : nextId();
+    $("fId").value = a ? a.id : "";
     $("fId").disabled = !!a;
+    $("lookup").textContent = a ? "Refresh from catalogue" : "Look up";
+    $("lookup").hidden = !!a && !/^\d+$/.test(a.id);
     $("fTitle").value = a?.title || "";
     $("fArtist").value = a?.artist || "";
     $("fYear").value = a?.year || "";
+    $("fMuseum").value = a?.museum || "";
     $("fImage").value = a?.imageUrl || "";
     $("fMore").value = a?.moreInfoUrl || "";
     $("fActive").checked = a ? a.active !== false : true;
+    $("artDelete").hidden = !a;
+    $("found").hidden = true;
     $("artErr").hidden = true;
     $("artDialog").showModal();
+    if (!a) $("fId").focus();
   }
 
-  function nextId() {
-    const nums = artworks.map(a => parseInt((a.id.match(/^ART(\d+)$/) || [])[1], 10)).filter(n => !isNaN(n));
-    const n = (nums.length ? Math.max(...nums) : 0) + 1;
-    return "ART" + String(n).padStart(3, "0");
+  // Fetch details from the CAS catalogue (via our /api/cas helper) and fill the form
+  async function lookup() {
+    const id = $("fId").value.trim();
+    const box = $("found");
+    box.className = "found";
+    if (!/^\d+$/.test(id)) {
+      box.classList.add("err");
+      box.textContent = "Catalogue numbers are digits only, e.g. 8076.";
+      box.hidden = false;
+      return;
+    }
+    $("lookup").disabled = true;
+    box.textContent = "Looking up…";
+    box.hidden = false;
+    try {
+      const r = await fetch("/api/cas?nid=" + encodeURIComponent(id));
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Lookup failed");
+      $("fTitle").value = d.title;
+      $("fArtist").value = d.artist;
+      $("fYear").value = d.year;
+      $("fMuseum").value = d.museum;
+      $("fImage").value = d.imageUrl;
+      $("fMore").value = d.moreInfoUrl;
+      looked = { accessionNumber: d.accessionNumber, medium: d.medium, imageAlt: d.imageAlt, catalogueId: d.catalogueId };
+      box.innerHTML = `${d.imageUrl ? `<img src="${esc(d.imageUrl)}" alt="">` : ""}
+        <div><b>${esc(d.title)}</b><br>${esc([d.artist, d.year].filter(Boolean).join(", "))}<br>
+        <span style="color:var(--muted)">${esc(d.museum)}</span></div>`;
+    } catch (err) {
+      box.classList.add("err");
+      box.textContent = err.message;
+    } finally {
+      $("lookup").disabled = false;
+    }
   }
+  $("lookup").addEventListener("click", lookup);
+  $("fId").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lookup(); } });
+
+  $("artDelete").addEventListener("click", async () => {
+    const n = responses.filter(r => r.artworkId === editingId).length;
+    const msg = n
+      ? `Delete this artwork? Its QR code will stop working. Its ${n} response(s) are kept and still appear in the CSV.`
+      : "Delete this artwork? Its QR code will stop working.";
+    if (!confirm(msg)) return;
+    try {
+      await deleteDoc(doc(db, "artworks", editingId));
+      $("artDialog").close();
+      await loadAll();
+    } catch (err) {
+      $("artErr").textContent = "Couldn't delete: " + err.message;
+      $("artErr").hidden = false;
+    }
+  });
 
   $("artForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -408,12 +478,14 @@
       title: $("fTitle").value.trim(),
       artist: $("fArtist").value.trim(),
       year: $("fYear").value.trim(),
+      museum: $("fMuseum").value.trim(),
       imageUrl: $("fImage").value.trim(),
       moreInfoUrl: $("fMore").value.trim(),
-      active: $("fActive").checked
+      active: $("fActive").checked,
+      ...looked
     };
     try {
-      await setDoc(doc(db, "artworks", id), data);
+      await setDoc(doc(db, "artworks", id), data, { merge: true });
       $("artDialog").close();
       await loadAll();
     } catch (err) {
@@ -489,11 +561,12 @@
     };
     const pad = (n) => String(n).padStart(2, "0");
     const fmt = (d) => d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
-    const header = ["artwork_id", "title", "artist", "submitted", "liked", "rating", "comment", "comment_length", "visitor"];
+    const header = ["artwork_id", "title", "artist", "museum", "submitted", "liked", "rating", "comment", "comment_length", "visitor"];
     const rows = filtered().map(r => [
       r.artworkId,
       art[r.artworkId]?.title || "",
       art[r.artworkId]?.artist || "",
+      art[r.artworkId]?.museum || "",
       fmt(r.date),
       r.liked ? 1 : 0,
       r.rating || "",
