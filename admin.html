@@ -92,6 +92,30 @@
   dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
   #artForm .buttons { position: sticky; bottom: -22px; background: #fff; margin: 20px -22px -22px; padding: 14px 22px; border-top: 1px solid var(--line); }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  dialog.wide { width: min(760px, calc(100vw - 32px)); }
+  .pick { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .pick button { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; }
+  .pick button:hover, .pick button.on { border-color: var(--accent); background: var(--accent-soft); }
+  .worklist { max-height: 300px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .worklist:empty { display: none; }
+  .worklist .w { display: flex; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .worklist .w:last-child { border-bottom: 0; }
+  .worklist .w img { width: 30px; height: 36px; object-fit: cover; border-radius: 3px; background: #eee; flex: none; }
+  .worklist .w .t { flex: 1; min-width: 0; }
+  .worklist .w .t div:last-child { color: var(--muted); font-size: 12px; }
+  .worklist .tag { font-size: 11px; color: var(--muted); background: #f0eee9; border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
+  .worklist .tag.done { background: #e6f2e8; color: #2e6b3a; }
+  .worklist.checks .w { cursor: pointer; }
+  .lblgrid { display: grid; grid-template-columns: 1fr 180px; gap: 18px; margin-top: 12px; }
+  @media (max-width: 640px) { .lblgrid { grid-template-columns: 1fr; } }
+  .listhead { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .sheetpick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 120px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: #faf8f5; }
+  .sheetpick button { height: 26px; border: 1px solid var(--line); background: #fff; border-radius: 3px; font-size: 11px; color: var(--muted); padding: 0; }
+  .sheetpick button.used { background: #eee; color: #bbb; text-decoration: line-through; }
+  .sheetpick button.start { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .adjust { margin-top: 14px; font-size: 13px; }
+  .adjust summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+  .adjust input { width: 90px; }
   .lookup { display: flex; gap: 8px; }
   .lookup input { flex: 1; }
   .found { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 10px; background: var(--accent-soft); border-radius: 10px; font-size: 13px; }
@@ -138,6 +162,8 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Artworks</h2>
+        <button class="btn" id="importMuseum">Import a museum</button>
+        <button class="btn" id="printLabels">Print labels</button>
         <button class="btn primary" id="addArt">Add artwork</button>
       </div>
       <div class="table-wrap">
@@ -197,6 +223,69 @@
   </form>
 </dialog>
 
+<!-- Import museum dialog -->
+<dialog id="impDialog" class="wide">
+  <div class="body">
+    <h2>Import a museum</h2>
+    <p class="hint" style="margin:0 0 12px">Adds every work the catalogue lists at a museum, ready for labels. Works already in the app are left as they are.</p>
+    <form id="impSearchForm" class="lookup">
+      <input type="text" id="impQ" placeholder="Part of the museum's name, e.g. Peterhead" autocomplete="off">
+      <button class="btn" type="submit">Search</button>
+    </form>
+    <div id="impResults" class="pick"></div>
+    <div id="impStatus" class="found" hidden></div>
+    <div id="impList" class="worklist"></div>
+    <div class="buttons">
+      <button class="btn" type="button" id="impClose">Close</button>
+      <button class="btn primary" type="button" id="impAdd" disabled>Add works</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Print labels dialog -->
+<dialog id="lblDialog" class="wide">
+  <div class="body">
+    <h2>Print labels</h2>
+    <p class="hint" style="margin:0 0 12px">For A4 sheets of 8 labels, 99.1 × 67.7 mm (e.g. Avery L7165 for laser, J8165 for inkjet). Use matt labels. In the print window choose <b>Actual size / 100%</b>, never "Fit to page".</p>
+    <label class="f" for="lblMuseum">Museum</label>
+    <select id="lblMuseum"></select>
+
+    <div class="lblgrid">
+      <div>
+        <div class="listhead">
+          <span class="f" style="margin:0">Works</span>
+          <span>
+            <button class="link" type="button" id="lblAll">All</button> ·
+            <button class="link" type="button" id="lblNone">None</button> ·
+            <button class="link" type="button" id="lblUnprinted">Not yet printed</button>
+          </span>
+        </div>
+        <div id="lblList" class="worklist checks"></div>
+      </div>
+      <div>
+        <span class="f" style="margin:0 0 6px">Start at label</span>
+        <div class="sheetpick" id="lblStart"></div>
+        <div class="hint">Click a position to use up a part-used sheet.</div>
+        <details class="adjust">
+          <summary>Alignment adjustment</summary>
+          <div class="hint">Only if a test sheet shows the printing is off. Positive moves right / down.</div>
+          <label class="f" for="adjX">Across (mm)</label>
+          <input type="number" id="adjX" step="0.5" value="0">
+          <label class="f" for="adjY">Down (mm)</label>
+          <input type="number" id="adjY" step="0.5" value="0">
+        </details>
+      </div>
+    </div>
+
+    <div class="found" id="lblSummary"></div>
+    <div class="buttons">
+      <button class="btn" type="button" id="lblTest" style="margin-right:auto">Print test sheet</button>
+      <button class="btn" type="button" id="lblClose">Close</button>
+      <button class="btn primary" type="button" id="lblPrint">Print labels</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- QR dialog -->
 <dialog id="qrDialog">
   <div class="body">
@@ -214,7 +303,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCHq1L08Hog9LbOrKIpoLej8K1bnYixCSg",
@@ -277,7 +366,11 @@
         getDocs(collection(db, "artworks")),
         getDocs(query(collection(db, "responses"), orderBy("submittedAt", "desc")))
       ]);
-      artworks = aSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.id.localeCompare(b.id));
+      artworks = aSnap.docs.map(d => {
+        const a = { id: d.id, ...d.data() };
+        if (a.labelsPrintedAt && a.labelsPrintedAt.toDate) a.labelsPrintedAt = a.labelsPrintedAt.toDate();
+        return a;
+      }).sort((a, b) => (a.museum || "").localeCompare(b.museum || "") || a.id.localeCompare(b.id, undefined, { numeric: true }));
       responses = rSnap.docs.map(d => {
         const r = d.data();
         return { id: d.id, ...r, date: r.submittedAt ? r.submittedAt.toDate() : null };
@@ -436,7 +529,7 @@
       $("fMuseum").value = d.museum;
       $("fImage").value = d.imageUrl;
       $("fMore").value = d.moreInfoUrl;
-      looked = { accessionNumber: d.accessionNumber, medium: d.medium, imageAlt: d.imageAlt, catalogueId: d.catalogueId };
+      looked = { accessionNumber: d.accessionNumber, medium: d.medium, imageAlt: d.imageAlt, catalogueId: d.catalogueId, museumId: d.museumId || "" };
       box.innerHTML = `${d.imageUrl ? `<img src="${esc(d.imageUrl)}" alt="">` : ""}
         <div><b>${esc(d.title)}</b><br>${esc([d.artist, d.year].filter(Boolean).join(", "))}<br>
         <span style="color:var(--muted)">${esc(d.museum)}</span></div>`;
@@ -550,6 +643,326 @@
         <div class="foot"><b>SCAN WITH YOUR PHONE CAMERA</b>No app needed · Ref ${esc(a.id)}</div>
       </div><script>window.onload = () => setTimeout(() => window.print(), 300);<\/script></body></html>`);
     w.document.close();
+  });
+
+  // QR code as crisp vector SVG (prints sharply at any size)
+  function qrSvg(text) {
+    const qr = qrcode(0, "M");
+    qr.addData(text);
+    qr.make();
+    const n = qr.getModuleCount(), q = 4, size = n + q * 2;
+    let d = "";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) d += `M${c + q} ${r + q}h1v1h-1z`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  }
+
+  // ---------- Import a museum ----------
+  let impMuseum = null;     // {id, title}
+  let impWorks = [];        // works found in the catalogue
+
+  $("importMuseum").addEventListener("click", () => {
+    impMuseum = null; impWorks = [];
+    $("impQ").value = "";
+    $("impResults").innerHTML = "";
+    $("impList").innerHTML = "";
+    $("impStatus").hidden = true;
+    $("impAdd").disabled = true;
+    $("impAdd").textContent = "Add works";
+    $("impDialog").showModal();
+    $("impQ").focus();
+  });
+  $("impClose").addEventListener("click", () => $("impDialog").close());
+
+  function impMsg(html, isErr) {
+    const s = $("impStatus");
+    s.className = "found" + (isErr ? " err" : "");
+    s.innerHTML = html;
+    s.hidden = false;
+  }
+
+  $("impSearchForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("impResults").innerHTML = "";
+    $("impList").innerHTML = "";
+    $("impAdd").disabled = true;
+    impMsg("Searching…");
+    try {
+      const r = await fetch("/api/cas-museums?q=" + encodeURIComponent($("impQ").value.trim()));
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Search failed");
+      if (!d.museums.length) { impMsg("No matches. Try a different part of the name.", true); return; }
+      $("impStatus").hidden = true;
+      $("impResults").innerHTML = d.museums.map(m =>
+        `<button type="button" data-mid="${esc(m.id)}" data-mtitle="${esc(m.title)}">${esc(m.title)}</button>`).join("");
+    } catch (err) { impMsg(esc(err.message), true); }
+  });
+
+  $("impResults").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-mid]");
+    if (!b) return;
+    [...$("impResults").children].forEach(x => x.classList.toggle("on", x === b));
+    impMuseum = { id: b.dataset.mid, title: b.dataset.mtitle };
+    impWorks = [];
+    $("impList").innerHTML = "";
+    $("impAdd").disabled = true;
+    try {
+      let offset = 0;
+      while (offset !== null) {
+        impMsg(`Reading the catalogue… ${impWorks.length} works so far`);
+        const r = await fetch(`/api/cas-museum-works?museum=${encodeURIComponent(impMuseum.id)}&offset=${offset}`);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Couldn't read the catalogue");
+        impWorks.push(...d.works);
+        offset = d.nextOffset;
+        if (impMuseum.id !== b.dataset.mid) return;   // another museum was picked meanwhile
+      }
+      renderImport();
+    } catch (err) { impMsg(esc(err.message), true); }
+  });
+
+  function renderImport() {
+    const have = new Set(artworks.map(a => a.id));
+    const fresh = impWorks.filter(w => !have.has(w.catalogueId));
+    if (!impWorks.length) { impMsg("The catalogue lists no works at this museum.", true); return; }
+    impMsg(`<div><b>${esc(impMuseum.title)}</b><br>${impWorks.length} work${impWorks.length === 1 ? "" : "s"} in the catalogue · ${fresh.length} new to the app`
+      + (impWorks.length - fresh.length ? ` · ${impWorks.length - fresh.length} already added` : "") + `</div>`);
+    $("impList").innerHTML = impWorks.map(w => `
+      <div class="w">
+        ${w.imageUrl ? `<img src="${esc(w.imageUrl)}" alt="" loading="lazy">` : `<img alt="">`}
+        <div class="t"><div>${esc(w.title)}</div><div>${esc([w.artist, w.year].filter(Boolean).join(", "))} · ${esc(w.catalogueId)}</div></div>
+        ${have.has(w.catalogueId) ? '<span class="tag done">In app</span>' : '<span class="tag">New</span>'}
+      </div>`).join("");
+    $("impAdd").disabled = fresh.length === 0;
+    $("impAdd").textContent = fresh.length ? `Add ${fresh.length} work${fresh.length === 1 ? "" : "s"}` : "Nothing new to add";
+  }
+
+  $("impAdd").addEventListener("click", async () => {
+    const have = new Set(artworks.map(a => a.id));
+    const fresh = impWorks.filter(w => !have.has(w.catalogueId));
+    if (!fresh.length) return;
+    $("impAdd").disabled = true;
+    try {
+      for (let i = 0; i < fresh.length; i += 400) {          // Firestore allows 500 writes per batch
+        const batch = writeBatch(db);
+        for (const w of fresh.slice(i, i + 400)) {
+          batch.set(doc(db, "artworks", w.catalogueId), { ...w, museum: w.museum || impMuseum.title, active: true });
+        }
+        impMsg(`Adding… ${Math.min(i + 400, fresh.length)} of ${fresh.length}`);
+        await batch.commit();
+      }
+      await loadAll();
+      renderImport();
+      impMsg(`<div><b>Done.</b> ${fresh.length} work${fresh.length === 1 ? "" : "s"} added. You can now print their labels.</div>`);
+    } catch (err) {
+      impMsg("Couldn't add the works: " + esc(err.message), true);
+      $("impAdd").disabled = false;
+    }
+  });
+
+  // ---------- Print labels (A4, 8 per sheet, 99.1 × 67.7 mm) ----------
+  const SHEET = {
+    cols: 2, rows: 4,
+    w: 99.1, h: 67.7,          // label size (mm)
+    left: 4.67, top: 13.04,    // first label's top-left corner (mm)
+    dx: 101.64, dy: 67.73      // distance from one label to the next (mm)
+  };
+  const PER_SHEET = SHEET.cols * SHEET.rows;
+
+  // Keep the logo ready as embedded data, so it is always on the page before printing starts
+  let logoData = location.origin + "/images/logo.png";
+  fetch("/images/logo.png").then(r => r.blob()).then(blob => {
+    const fr = new FileReader();
+    fr.onload = () => { logoData = fr.result; };
+    fr.readAsDataURL(blob);
+  }).catch(() => {});
+  let lblStart = 1;
+  let lblSelected = new Set();
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  };
+  $("adjX").value = store.get("lbl.adjX", "0");
+  $("adjY").value = store.get("lbl.adjY", "0");
+  $("adjX").addEventListener("change", () => store.set("lbl.adjX", $("adjX").value));
+  $("adjY").addEventListener("change", () => store.set("lbl.adjY", $("adjY").value));
+
+  const museumOf = (a) => a.museum || "(No museum recorded)";
+  const lblWorks = () => artworks.filter(a => museumOf(a) === $("lblMuseum").value);
+
+  $("printLabels").addEventListener("click", () => {
+    const groups = {};
+    for (const a of artworks) {
+      const m = museumOf(a);
+      groups[m] = groups[m] || { n: 0, printed: 0 };
+      groups[m].n++;
+      if (a.labelsPrintedAt) groups[m].printed++;
+    }
+    const names = Object.keys(groups).sort();
+    if (!names.length) { alert("Add some artworks first."); return; }
+    const prev = $("lblMuseum").value;
+    $("lblMuseum").innerHTML = names.map(m =>
+      `<option value="${esc(m)}">${esc(m)} — ${groups[m].n} work${groups[m].n === 1 ? "" : "s"}${groups[m].printed ? `, ${groups[m].printed} printed` : ""}</option>`).join("");
+    if (names.includes(prev)) $("lblMuseum").value = prev;
+    lblStart = 1;
+    selectLabels("all");
+    $("lblDialog").showModal();
+  });
+  $("lblClose").addEventListener("click", () => $("lblDialog").close());
+  $("lblMuseum").addEventListener("change", () => { lblStart = 1; selectLabels("all"); });
+  $("lblAll").addEventListener("click", () => selectLabels("all"));
+  $("lblNone").addEventListener("click", () => selectLabels("none"));
+  $("lblUnprinted").addEventListener("click", () => selectLabels("unprinted"));
+
+  function selectLabels(mode) {
+    const works = lblWorks();
+    lblSelected = new Set(
+      mode === "all" ? works.map(a => a.id) :
+      mode === "unprinted" ? works.filter(a => !a.labelsPrintedAt).map(a => a.id) : []);
+    renderLabels();
+  }
+
+  $("lblList").addEventListener("click", (e) => {
+    const row = e.target.closest(".w[data-id]");
+    if (!row) return;
+    const id = row.dataset.id;
+    if (e.target.tagName !== "INPUT") row.querySelector("input").checked = !lblSelected.has(id);
+    row.querySelector("input").checked ? lblSelected.add(id) : lblSelected.delete(id);
+    renderLabelSummary();
+  });
+
+  $("lblStart").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-pos]");
+    if (!b) return;
+    lblStart = +b.dataset.pos;
+    renderLabelSummary();
+  });
+
+  function renderLabels() {
+    $("lblList").innerHTML = lblWorks().map(a => `
+      <div class="w" data-id="${esc(a.id)}">
+        <input type="checkbox" ${lblSelected.has(a.id) ? "checked" : ""} aria-label="Include ${esc(a.title)}">
+        <div class="t"><div>${esc(a.title || a.id)}</div><div>${esc([a.artist, a.year].filter(Boolean).join(", "))} · ${esc(a.id)}</div></div>
+        ${a.labelsPrintedAt ? `<span class="tag done">Printed ${a.labelsPrintedAt.toLocaleDateString("en-GB")}</span>` : ""}
+      </div>`).join("");
+    renderLabelSummary();
+  }
+
+  function renderLabelSummary() {
+    // Sheet position picker: 2 across × 4 down, numbered left-to-right, top-to-bottom
+    $("lblStart").innerHTML = Array.from({ length: PER_SHEET }, (_, i) => {
+      const pos = i + 1;
+      return `<button type="button" data-pos="${pos}" class="${pos < lblStart ? "used" : pos === lblStart ? "start" : ""}" title="Start at label ${pos}">${pos}</button>`;
+    }).join("");
+    const n = lblSelected.size;
+    const slots = n + lblStart - 1;
+    const sheets = Math.ceil(slots / PER_SHEET);
+    const spare = sheets * PER_SHEET - slots;
+    $("lblSummary").className = "found";
+    $("lblSummary").innerHTML = n
+      ? `<div><b>${n} label${n === 1 ? "" : "s"}</b> = <b>${sheets} sheet${sheets === 1 ? "" : "s"}</b>`
+        + (lblStart > 1 ? ` (starting at label ${lblStart} on the first sheet)` : "")
+        + (spare ? ` · ${spare} spare on the last sheet` : "") + `</div>`
+      : "No works selected.";
+    $("lblPrint").disabled = n === 0;
+  }
+
+  function labelHtml(a) {
+    const url = location.origin + "/a/" + encodeURIComponent(a.id);
+    return `
+      <div class="qr">${qrSvg(url)}</div>
+      <div class="txt">
+        <img class="logo" src="${logoData}" alt="">
+        <div class="h">What do you think?</div>
+        <div class="s">Like, rate or comment on</div>
+        <div class="title">${esc(a.title || "this artwork")}</div>
+        <div class="by">${esc([a.artist, a.year].filter(Boolean).join(", "))}</div>
+        <div class="foot"><b>Scan with your phone camera</b>No app needed · Ref ${esc(a.id)}</div>
+      </div>`;
+  }
+
+  function openSheets(cells, test) {
+    // cells: array (length = sheets × 8) of label HTML or null for an empty position
+    const ax = parseFloat($("adjX").value) || 0, ay = parseFloat($("adjY").value) || 0;
+    let pages = "";
+    for (let s = 0; s < cells.length; s += PER_SHEET) {
+      let labels = "";
+      for (let i = 0; i < PER_SHEET; i++) {
+        const html = cells[s + i];
+        if (html == null && !test) continue;
+        const col = i % SHEET.cols, row = Math.floor(i / SHEET.cols);
+        const x = SHEET.left + col * SHEET.dx + ax, y = SHEET.top + row * SHEET.dy + ay;
+        labels += `<div class="label${test ? " test" : ""}" style="left:${x.toFixed(2)}mm;top:${y.toFixed(2)}mm">${html || ""}</div>`;
+      }
+      pages += `<div class="sheet">${labels}</div>`;
+    }
+    const w = window.open("", "_blank");
+    if (!w) { alert("Your browser blocked the print window. Please allow pop-ups for this site and try again."); return null; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${test ? "Test sheet" : "Labels"}</title>
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #1d1b20; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { position: relative; width: 210mm; height: 297mm; overflow: hidden; page-break-after: always; break-after: page; }
+  .sheet:last-child { page-break-after: auto; break-after: auto; }
+  .label { position: absolute; width: ${SHEET.w}mm; height: ${SHEET.h}mm; padding: 4mm 4.5mm 4mm 3.5mm; display: flex; gap: 3mm; align-items: center; overflow: hidden; }
+  .label.test { outline: 0.2mm dashed #999; display: grid; place-items: center; font-size: 10pt; color: #666; }
+  .qr { flex: none; width: 41mm; height: 41mm; }
+  .qr svg { width: 100%; height: 100%; display: block; }
+  .txt { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; }
+  .logo { height: 7.5mm; width: auto; align-self: flex-end; margin-bottom: 2mm; }
+  .h { font-size: 11pt; font-weight: bold; line-height: 1.15; }
+  .s { font-size: 7pt; color: #555; margin-top: 1mm; }
+  .title { font-size: 8pt; font-style: italic; line-height: 1.2; margin-top: 0.6mm; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .by { font-size: 7pt; color: #555; margin-top: 0.6mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .foot { margin-top: auto; border-top: 0.2mm solid #ccc; padding-top: 1.2mm; font-size: 6pt; color: #777; }
+  .foot b { display: block; font-size: 6.5pt; letter-spacing: 0.03em; text-transform: uppercase; color: #1d1b20; }
+  @media screen {
+    body { background: #888; padding: 10mm 0; }
+    .sheet { background: #fff; margin: 0 auto 10mm; box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+  }
+</style></head><body>${pages}
+<script>
+  window.addEventListener("load", () => {
+    const imgs = [...document.images].filter(i => !i.complete);
+    Promise.all(imgs.map(i => new Promise(r => { i.onload = i.onerror = r; })))
+      .then(() => setTimeout(() => window.print(), 300));
+  });
+<\/script></body></html>`);
+    w.document.close();
+    return w;
+  }
+
+  $("lblTest").addEventListener("click", () => {
+    const cells = Array.from({ length: PER_SHEET }, (_, i) =>
+      `<div>Label ${i + 1}<br><span style="font-size:8pt">${SHEET.w} × ${SHEET.h} mm</span></div>`);
+    openSheets(cells, true);
+  });
+
+  $("lblPrint").addEventListener("click", () => {
+    const chosen = lblWorks().filter(a => lblSelected.has(a.id));
+    if (!chosen.length) return;
+    const cells = Array(lblStart - 1).fill(null).concat(chosen.map(labelHtml));
+    while (cells.length % PER_SHEET) cells.push(null);
+    const w = openSheets(cells, false);
+    if (!w) return;
+    // Once the print window is closed, offer to record the date the labels were printed
+    const timer = setInterval(async () => {
+      if (!w.closed) return;
+      clearInterval(timer);
+      if (!confirm(`Did the ${chosen.length} label${chosen.length === 1 ? "" : "s"} print correctly?\n\nOK records today's date against them, so you can see later which have been printed.`)) return;
+      try {
+        for (let i = 0; i < chosen.length; i += 400) {
+          const batch = writeBatch(db);
+          for (const a of chosen.slice(i, i + 400)) batch.set(doc(db, "artworks", a.id), { labelsPrintedAt: serverTimestamp() }, { merge: true });
+          await batch.commit();
+        }
+        await loadAll();
+        if ($("lblDialog").open) renderLabels();
+      } catch (err) { alert("Couldn't record the print date: " + err.message); }
+    }, 800);
   });
 
   // ---------- CSV ----------
