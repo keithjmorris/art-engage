@@ -6,19 +6,42 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return signedIn()
-        && request.auth.token.get('email', '').lower() == 'keith.morris@outlook.com';
+    function myEmail() {
+      return request.auth.token.get('email', '').lower();
     }
 
-    // Artwork details: anyone can read, only the administrator can change
+    // The owner is fixed here, so the owner can never be locked out.
+    function isOwner() {
+      return signedIn() && myEmail() == 'keith.morris@outlook.com';
+    }
+
+    // Other administrators are listed in the "admins" collection (one document per email),
+    // which the owner manages from the admin page.
+    function isAdmin() {
+      return isOwner()
+        || (signedIn() && myEmail() != ''
+            && exists(/databases/$(database)/documents/admins/$(myEmail())));
+    }
+
+    // Administrator list: only the owner can add or remove people.
+    // Anyone signed in can check whether their own email is on it.
+    match /admins/{email} {
+      allow read: if isAdmin() || (signedIn() && email == myEmail());
+      allow create, update: if isOwner()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(['addedAt', 'addedBy'])
+        && request.resource.data.addedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Artwork details: anyone can read, only administrators can change
     match /artworks/{artworkId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
     // Visitor responses: one per visitor per artwork.
-    // Visitors can add or update their own; only the administrator can read or delete.
+    // Visitors can add or update their own; only administrators can read or delete.
     match /responses/{responseId} {
 
       function validResponse() {

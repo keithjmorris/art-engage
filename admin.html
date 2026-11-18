@@ -92,6 +92,11 @@
   dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
   #artForm .buttons { position: sticky; bottom: -22px; background: #fff; margin: 20px -22px -22px; padding: 14px 22px; border-top: 1px solid var(--line); }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .login .forgot { margin: 14px 0 0; text-align: center; }
+  .login .forgot .link { font-size: 13px; }
+  .ok { color: #2e6b3a; font-size: 13px; margin-top: 10px; }
+  .admins-body { padding: 16px 18px; }
+  .admins-body .worklist { margin-top: 14px; }
   dialog.wide { width: min(760px, calc(100vw - 32px)); }
   .pick { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
   .pick button { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; }
@@ -138,6 +143,8 @@
     <input type="password" id="password" autocomplete="current-password" required>
     <button class="btn primary" type="submit">Sign in</button>
     <div class="err" id="loginErr" hidden></div>
+    <p class="forgot"><button class="link" type="button" id="forgot">Forgotten your password, or setting one for the first time?</button></p>
+    <div class="ok" id="loginOk" hidden></div>
   </form>
 </div>
 
@@ -185,6 +192,21 @@
         <button class="btn" id="csv">Download CSV</button>
       </div>
       <div id="respList"></div>
+    </section>
+
+    <section class="panel" id="adminsPanel" hidden>
+      <div class="panel-head">
+        <h2>Administrators</h2>
+      </div>
+      <div class="admins-body">
+        <p class="hint" style="margin:0 0 12px">To add someone: first create their login in Firebase (Authentication → <b>Add user</b>, with their email and a temporary password), then add the same email here. They can set their own password with the "Forgotten your password" link on the sign-in page.</p>
+        <form id="adminAddForm" class="lookup">
+          <input type="email" id="adminEmail" placeholder="their.email@example.org" required autocomplete="off">
+          <button class="btn primary" type="submit">Add</button>
+        </form>
+        <div class="err" id="adminErr" hidden></div>
+        <div id="adminList" class="worklist"></div>
+      </div>
     </section>
   </main>
 </div>
@@ -302,8 +324,8 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCHq1L08Hog9LbOrKIpoLej8K1bnYixCSg",
@@ -313,7 +335,9 @@
     messagingSenderId: "1090220532946",
     appId: "1:1090220532946:web:c65ed3cb77f6a19abb390b"
   };
-  const ADMIN_EMAIL = "keith.morris@outlook.com";
+  // The owner can always sign in and is the only one who can add or remove administrators.
+  // Other administrators are listed in the database (Administrators section, owner only).
+  const OWNER_EMAIL = "keith.morris@outlook.com";
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
@@ -328,13 +352,28 @@
   let editingId = null;
 
   // ---------- Auth ----------
-  onAuthStateChanged(auth, (user) => {
-    const isAdmin = user && !user.isAnonymous && (user.email || "").toLowerCase() === ADMIN_EMAIL;
-    if (isAdmin) {
+  let isOwner = false;
+
+  async function checkAdmin(user) {
+    if (!user || user.isAnonymous || !user.email) return false;
+    const email = user.email.toLowerCase();
+    if (email === OWNER_EMAIL) return true;
+    try {
+      return (await getDoc(doc(db, "admins", email))).exists();
+    } catch { return false; }
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    const ok = await checkAdmin(user);
+    if (ok) {
+      isOwner = user.email.toLowerCase() === OWNER_EMAIL;
       $("who").textContent = user.email;
+      $("loginErr").hidden = true;
       $("loginView").hidden = true;
       $("dashView").hidden = false;
+      $("adminsPanel").hidden = !isOwner;
       loadAll();
+      if (isOwner) loadAdmins();
     } else {
       $("dashView").hidden = true;
       $("loginView").hidden = false;
@@ -356,6 +395,67 @@
     }
   });
   $("signout").addEventListener("click", () => signOut(auth));
+
+  $("forgot").addEventListener("click", async () => {
+    const email = $("email").value.trim();
+    $("loginErr").hidden = true;
+    $("loginOk").hidden = true;
+    if (!email) {
+      $("loginErr").textContent = "Type your email address above first, then click this link.";
+      $("loginErr").hidden = false;
+      return;
+    }
+    try { await sendPasswordResetEmail(auth, email); } catch {}
+    // Same message either way, so the page doesn't reveal which emails have accounts
+    $("loginOk").textContent = "If that email has an account, a link to set a new password is on its way. Check junk mail too.";
+    $("loginOk").hidden = false;
+  });
+
+  // ---------- Administrators (owner only) ----------
+  async function loadAdmins() {
+    try {
+      const snap = await getDocs(collection(db, "admins"));
+      const rows = snap.docs.map(d => ({ email: d.id, ...d.data() }))
+        .sort((a, b) => a.email.localeCompare(b.email));
+      $("adminList").innerHTML =
+        `<div class="w"><div class="t"><div>${esc(OWNER_EMAIL)}</div><div>Owner · can add and remove administrators</div></div></div>` +
+        rows.map(r => `<div class="w"><div class="t"><div>${esc(r.email)}</div><div>Administrator${r.addedAt && r.addedAt.toDate ? " · added " + r.addedAt.toDate().toLocaleDateString("en-GB") : ""}</div></div>
+          <button class="btn small danger" type="button" data-remove-admin="${esc(r.email)}">Remove</button></div>`).join("");
+    } catch (err) {
+      $("adminList").innerHTML = `<div class="empty">Couldn't load the list. Have the new security rules been published in Firebase?</div>`;
+    }
+  }
+
+  $("adminAddForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("adminEmail").value.trim().toLowerCase();
+    $("adminErr").hidden = true;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      $("adminErr").textContent = "That doesn't look like an email address.";
+      $("adminErr").hidden = false;
+      return;
+    }
+    if (email === OWNER_EMAIL) { $("adminEmail").value = ""; return; }
+    try {
+      await setDoc(doc(db, "admins", email), { addedAt: serverTimestamp(), addedBy: auth.currentUser.email.toLowerCase() });
+      $("adminEmail").value = "";
+      loadAdmins();
+    } catch (err) {
+      $("adminErr").textContent = "Couldn't add: " + err.message;
+      $("adminErr").hidden = false;
+    }
+  });
+
+  $("adminList").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-remove-admin]");
+    if (!b) return;
+    const email = b.dataset.removeAdmin;
+    if (!confirm(`Remove ${email} as an administrator?\n\nThey will no longer be able to use this page. Their Firebase login stays until you delete it in Firebase.`)) return;
+    try {
+      await deleteDoc(doc(db, "admins", email));
+      loadAdmins();
+    } catch (err) { alert("Couldn't remove: " + err.message); }
+  });
   $("refresh").addEventListener("click", loadAll);
 
   // ---------- Data ----------
