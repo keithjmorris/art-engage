@@ -242,6 +242,10 @@
           <span><b>Show "About you"</b><br><span class="hint">Optional age, gender and first half of postcode.</span></span></label>
         <label class="optrow"><input type="checkbox" id="optTouch">
           <span><b>Show "Stay in touch"</b><br><span class="hint">Optional email sign-up with a consent box. Check with the Director before switching on for real visitors.</span></span></label>
+        <label class="optrow"><input type="checkbox" id="optDonate">
+          <span><b>Show "Donate" button (demo)</b><br><span class="hint">A gift to the Contemporary Art Society. No payment is taken yet: visitors see a demonstration message.</span></span></label>
+        <label class="optrow"><input type="checkbox" id="optSponsor">
+          <span><b>Show "Sponsor this work" button (demo)</b><br><span class="hint">Explained as a gift to the museum that holds the work. No payment is taken yet.</span></span></label>
         <label class="f" for="optPrivacy">Privacy policy web address (shown under the email sign-up)</label>
         <input type="url" id="optPrivacy" placeholder="https://contemporaryartsociety.org/…">
         <div class="optsave">
@@ -521,7 +525,7 @@
   const GENDER_LABELS = { "woman": "Woman", "man": "Man", "non-binary": "Non-binary", "other": "Another way", "prefer-not": "Prefer not to say" };
   const placeLabel = (p) => p === "OUTSIDE_UK" ? "Outside the UK" : p;
   let contacts = [];
-  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "" };
+  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "", showDonate: false, showSponsor: false };
 
   // ---------- Data ----------
   async function loadExtras() {
@@ -532,6 +536,8 @@
     $("optAbout").checked = !!settings.aboutYou;
     $("optTouch").checked = !!settings.stayInTouch;
     $("optPrivacy").value = settings.privacyUrl || "";
+    $("optDonate").checked = !!settings.showDonate;
+    $("optSponsor").checked = !!settings.showSponsor;
     try {
       const c = await getDocs(collection(db, "contacts"));
       contacts = c.docs.map(d => { const x = d.data(); return { id: d.id, ...x, date: x.createdAt ? x.createdAt.toDate() : null }; })
@@ -545,7 +551,8 @@
   $("optSave").addEventListener("click", async () => {
     const url = $("optPrivacy").value.trim();
     if (url && !/^https:\/\/\S+$/.test(url)) { $("optStatus").textContent = "The privacy address should start with https://"; return; }
-    const next = { aboutYou: $("optAbout").checked, stayInTouch: $("optTouch").checked, privacyUrl: url };
+    const next = { aboutYou: $("optAbout").checked, stayInTouch: $("optTouch").checked, privacyUrl: url,
+                   showDonate: $("optDonate").checked, showSponsor: $("optSponsor").checked };
     if (next.stayInTouch && !settings.stayInTouch &&
         !confirm("Switch on email sign-ups?\n\nVisitors will be able to give their email address. Make sure the Society is happy to hold and use these emails, and add the privacy policy address if you have it.")) return;
     try {

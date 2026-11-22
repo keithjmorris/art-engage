@@ -183,6 +183,26 @@
   .fielderr { color: #a02828; font-size: .85rem; margin-top: 6px; }
   .fieldok { color: var(--muted); font-size: .85rem; margin-top: 6px; }
 
+  /* Support (demo) */
+  .give { padding: 12px 0; border-top: 1px solid var(--line); }
+  .give:first-of-type { border-top: 0; padding-top: 0; }
+  .give p { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
+  .givebtn {
+    width: 100%; border-radius: 12px; padding: 13px; font-weight: 600; font-size: 1rem;
+    background: var(--ink); color: #fff; border: 0;
+  }
+  .givebtn.alt { background: #fff; color: var(--ink); border: 1.5px solid var(--ink); }
+  .givebtn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+  dialog#giveDialog { border: 0; border-radius: 16px; padding: 0; width: min(420px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  dialog#giveDialog::backdrop { background: rgba(20,18,24,.5); }
+  .givebody { padding: 22px; }
+  .givebody h2 { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.35rem; margin: 0 0 4px; }
+  .givebody .sub { color: var(--muted); font-size: .9rem; margin: 0 0 16px; }
+  .amounts .chip { min-width: 64px; font-weight: 600; }
+  .demo { margin-top: 14px; background: #fdf6e3; border: 1px solid #ecd9a2; border-radius: 10px; padding: 12px; font-size: .88rem; line-height: 1.45; }
+  .givebtns { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+  .primary.small { width: auto; margin: 0; padding: 12px 22px; }
+
   .privacy { color: var(--muted); font-size: .8rem; margin-top: 18px; text-align: center; }
   .error { color: #a02828; font-size: .9rem; margin-top: 10px; }
 
@@ -302,6 +322,36 @@
       <button class="secondary" id="edit" type="button">Change my response</button>
     </section>
 
+    <!-- Optional: Support (demo only, no payment taken) -->
+    <section class="card support" id="supportCard" hidden>
+      <h2>Support</h2>
+      <p class="sub">If you enjoyed this work, you can help.</p>
+      <div class="give" id="giveDonate" hidden>
+        <button class="givebtn" type="button" data-give="donate">Donate</button>
+        <p>To the Contemporary Art Society, to carry on its work bringing art like this to museums across the UK.</p>
+      </div>
+      <div class="give" id="giveSponsor" hidden>
+        <button class="givebtn alt" type="button" data-give="sponsor">Sponsor this work</button>
+        <p>Your gift goes to <span id="sponsorMuseum">the museum</span>, which looks after this work.</p>
+      </div>
+    </section>
+
+    <dialog id="giveDialog" aria-labelledby="giveTitle">
+      <form method="dialog" class="givebody">
+        <h2 id="giveTitle">Donate</h2>
+        <p class="sub" id="giveWho"></p>
+        <div class="chips amounts" id="amounts" role="radiogroup" aria-label="Amount"></div>
+        <label class="check"><input type="checkbox" id="giftAid"> <span>I'm a UK taxpayer: add Gift Aid, worth 25% more at no cost to me.</span></label>
+        <div class="demo" id="giveDemo" hidden>
+          <b>This is a demonstration.</b> No payment has been taken. In the live version this would continue to a secure payment page (card, Apple Pay or Google Pay).
+        </div>
+        <div class="givebtns">
+          <button class="secondary" value="cancel" type="submit">Close</button>
+          <button class="primary small" id="giveGo" type="button" disabled>Continue</button>
+        </div>
+      </form>
+    </dialog>
+
     <p class="privacy" id="privacyLine">Responses are anonymous. We don't ask for your name or email.</p>
   </main>
 </div>
@@ -338,7 +388,7 @@
 
   const state = { liked: false, rating: 0, comment: "", ageBand: "", gender: "", postcodeArea: "", emailSent: false };
   const storageKey = "artengage:" + artworkId;
-  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "" };
+  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "", showDonate: false, showSponsor: false };
   let artwork = {};
 
   function show(id) {
@@ -558,6 +608,47 @@
     }
   });
 
+  // ---------- Support buttons (demo: nothing is charged or recorded) ----------
+  // Short museum name: the catalogue's name up to any bracketed detail
+  const museumShort = () => (artwork.museum || "").split(";")[0].replace(/\s*\(.*$/, "").trim();
+  let giveAmount = 0;
+
+  function setupSupport() {
+    const sponsorOk = settings.showSponsor && museumShort();   // no museum recorded: no sponsor button
+    $("giveDonate").hidden = !settings.showDonate;
+    $("giveSponsor").hidden = !sponsorOk;
+    $("supportCard").hidden = !(settings.showDonate || sponsorOk);
+    if (sponsorOk) $("sponsorMuseum").textContent = museumShort();
+    const wrap = $("amounts");
+    for (const n of [5, 10, 25, 50]) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.setAttribute("role", "radio");
+      b.dataset.n = n; b.textContent = "£" + n;
+      b.addEventListener("click", () => { giveAmount = n; renderGive(); });
+      wrap.appendChild(b);
+    }
+  }
+
+  function renderGive() {
+    [...$("amounts").children].forEach(b => b.setAttribute("aria-checked", String(+b.dataset.n === giveAmount)));
+    $("giveGo").disabled = !giveAmount;
+  }
+
+  document.querySelectorAll("[data-give]").forEach(btn => btn.addEventListener("click", () => {
+    const sponsor = btn.dataset.give === "sponsor";
+    $("giveTitle").textContent = sponsor ? "Sponsor this work" : "Donate";
+    $("giveWho").textContent = sponsor
+      ? `Your gift goes to ${museumShort()}, which looks after this work.`
+      : "Your gift goes to the Contemporary Art Society, a registered charity, to carry on its work.";
+    giveAmount = 0;
+    $("giftAid").checked = false;
+    $("giveDemo").hidden = true;
+    renderGive();
+    $("giveDialog").showModal();
+  }));
+
+  $("giveGo").addEventListener("click", () => { $("giveDemo").hidden = false; $("giveGo").disabled = true; });
+
   // ---------- Start ----------
   async function start() {
     if (!artworkId) {
@@ -582,6 +673,7 @@
       $("stayInTouch").hidden = !settings.stayInTouch;
       if (settings.privacyUrl) { $("privacyLink").href = settings.privacyUrl; $("privacyLinkWrap").hidden = false; }
       if (settings.stayInTouch) $("privacyLine").textContent = "Responses are anonymous. If you give us your email, it is kept separately.";
+      setupSupport();
       const hadSaved = loadSaved();
       $("comment").value = state.comment;
       if (state.postcodeArea === "OUTSIDE_UK") $("outsideUk").checked = true;

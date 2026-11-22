@@ -93,7 +93,9 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin()
         && settingId == 'visitorForm'
-        && request.resource.data.keys().hasOnly(['aboutYou', 'stayInTouch', 'privacyUrl'])
+        && request.resource.data.keys().hasOnly(['aboutYou', 'stayInTouch', 'privacyUrl', 'showDonate', 'showSponsor'])
+        && request.resource.data.get('showDonate', false) is bool
+        && request.resource.data.get('showSponsor', false) is bool
         && request.resource.data.aboutYou is bool
         && request.resource.data.stayInTouch is bool
         && request.resource.data.privacyUrl is string
