@@ -44,10 +44,18 @@ service cloud.firestore {
     // Visitors can add or update their own; only administrators can read or delete.
     match /responses/{responseId} {
 
+      // Optional "About you" answers (ageBand, gender, postcodeArea) must be blank or one of the listed choices.
       function validResponse() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt'])
+        return d.keys().hasOnly(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt',
+                                 'ageBand', 'gender', 'postcodeArea'])
           && d.keys().hasAll(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt'])
+          && (!('ageBand' in d) || d.ageBand in ['', 'under16', '16-24', '25-34', '35-44', '45-54',
+                                                  '55-64', '65-74', '75+', 'prefer-not'])
+          && (!('gender' in d) || d.gender in ['', 'woman', 'man', 'non-binary', 'other', 'prefer-not'])
+          && (!('postcodeArea' in d) || (d.postcodeArea is string
+                && (d.postcodeArea == '' || d.postcodeArea == 'OUTSIDE_UK'
+                    || d.postcodeArea.matches('^[A-Z]{1,2}[0-9][A-Z0-9]?$'))))
           && d.uid == request.auth.uid
           && d.artworkId is string
           && responseId == d.artworkId + '_' + request.auth.uid
@@ -62,6 +70,34 @@ service cloud.firestore {
       allow create: if signedIn() && validResponse();
       allow update: if signedIn() && resource.data.uid == request.auth.uid && validResponse();
       allow read, delete: if isAdmin();
+    }
+
+    // Mailing-list sign-ups. Deliberately NOT linked to responses (no visitor ID),
+    // so ratings and comments stay anonymous. Visitors can only add; administrators read and delete.
+    match /contacts/{contactId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['email', 'consent', 'artworkId', 'createdAt'])
+        && request.resource.data.keys().hasAll(['email', 'consent', 'artworkId', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+        && request.resource.data.consent == true
+        && request.resource.data.artworkId is string
+        && exists(/databases/$(database)/documents/artworks/$(request.resource.data.artworkId))
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if isAdmin();
+    }
+
+    // Visitor page options (which optional sections show). Anyone can read; administrators change.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && settingId == 'visitorForm'
+        && request.resource.data.keys().hasOnly(['aboutYou', 'stayInTouch', 'privacyUrl'])
+        && request.resource.data.aboutYou is bool
+        && request.resource.data.stayInTouch is bool
+        && request.resource.data.privacyUrl is string
+        && request.resource.data.privacyUrl.size() <= 300;
     }
   }
 }

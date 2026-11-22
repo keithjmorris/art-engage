@@ -96,6 +96,23 @@
   .login .forgot .link { font-size: 13px; }
   .ok { color: #2e6b3a; font-size: 13px; margin-top: 10px; }
   .admins-body { padding: 16px 18px; }
+  .profile { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 16px 18px 4px; }
+  @media (max-width: 800px) { .profile { grid-template-columns: 1fr; } }
+  .profile h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .bars .b { display: grid; grid-template-columns: 110px 1fr 34px; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
+  .bars .b .lab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bars .b .track { display: block; height: 10px; background: #f0eee9; border-radius: 99px; overflow: hidden; }
+  .bars .b .fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+  .bars .b.quiet .fill { background: #cfc8d9; }
+  .bars .b .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .bars .none { color: var(--muted); font-size: 13px; }
+  .profile-note { padding: 8px 18px 16px; margin: 0; }
+  .opts { padding: 16px 18px; max-width: 640px; }
+  .optrow { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; cursor: pointer; }
+  .optrow input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
+  .optsave { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .resp .tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .resp .tags span { background: #f0eee9; border-radius: 99px; padding: 0 8px; font-size: 12px; color: var(--muted); }
   .admins-body .worklist { margin-top: 14px; }
   dialog.wide { width: min(760px, calc(100vw - 32px)); }
   .pick { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
@@ -192,6 +209,46 @@
         <button class="btn" id="csv">Download CSV</button>
       </div>
       <div id="respList"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Who's responding</h2>
+        <span class="hint" id="profileScope">All artworks</span>
+      </div>
+      <div class="profile">
+        <div><h3>Age</h3><div id="pAge" class="bars"></div></div>
+        <div><h3>Gender</h3><div id="pGender" class="bars"></div></div>
+        <div><h3>Where they live (postcode area)</h3><div id="pPostcode" class="bars"></div></div>
+      </div>
+      <p class="hint profile-note" id="profileNote"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Mailing list</h2>
+        <span class="hint" id="contactsCount"></span>
+        <button class="btn" id="contactsCsv">Download mailing list</button>
+      </div>
+      <p class="hint profile-note">Everyone here ticked the box agreeing to receive emails. Emails are stored separately from responses and can't be matched to anyone's comments or ratings.</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Visitor page options</h2>
+      </div>
+      <div class="opts">
+        <label class="optrow"><input type="checkbox" id="optAbout">
+          <span><b>Show "About you"</b><br><span class="hint">Optional age, gender and first half of postcode.</span></span></label>
+        <label class="optrow"><input type="checkbox" id="optTouch">
+          <span><b>Show "Stay in touch"</b><br><span class="hint">Optional email sign-up with a consent box. Check with the Director before switching on for real visitors.</span></span></label>
+        <label class="f" for="optPrivacy">Privacy policy web address (shown under the email sign-up)</label>
+        <input type="url" id="optPrivacy" placeholder="https://contemporaryartsociety.org/…">
+        <div class="optsave">
+          <button class="btn primary" id="optSave" type="button">Save options</button>
+          <span class="hint" id="optStatus"></span>
+        </div>
+      </div>
     </section>
 
     <section class="panel" id="adminsPanel" hidden>
@@ -458,8 +515,113 @@
   });
   $("refresh").addEventListener("click", loadAll);
 
+  // Labels for the optional "About you" answers (codes match the visitor page)
+  const AGE_LABELS = { "under16": "Under 16", "16-24": "16–24", "25-34": "25–34", "35-44": "35–44", "45-54": "45–54",
+    "55-64": "55–64", "65-74": "65–74", "75+": "75 or over", "prefer-not": "Prefer not to say" };
+  const GENDER_LABELS = { "woman": "Woman", "man": "Man", "non-binary": "Non-binary", "other": "Another way", "prefer-not": "Prefer not to say" };
+  const placeLabel = (p) => p === "OUTSIDE_UK" ? "Outside the UK" : p;
+  let contacts = [];
+  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "" };
+
   // ---------- Data ----------
+  async function loadExtras() {
+    try {
+      const s = await getDoc(doc(db, "settings", "visitorForm"));
+      if (s.exists()) settings = { ...settings, ...s.data() };
+    } catch {}
+    $("optAbout").checked = !!settings.aboutYou;
+    $("optTouch").checked = !!settings.stayInTouch;
+    $("optPrivacy").value = settings.privacyUrl || "";
+    try {
+      const c = await getDocs(collection(db, "contacts"));
+      contacts = c.docs.map(d => { const x = d.data(); return { id: d.id, ...x, date: x.createdAt ? x.createdAt.toDate() : null }; })
+        .sort((a, b) => (b.date || 0) - (a.date || 0));
+      $("contactsCount").textContent = `${contacts.length} sign-up${contacts.length === 1 ? "" : "s"}`;
+    } catch {
+      $("contactsCount").textContent = "Publish the new security rules to see sign-ups.";
+    }
+  }
+
+  $("optSave").addEventListener("click", async () => {
+    const url = $("optPrivacy").value.trim();
+    if (url && !/^https:\/\/\S+$/.test(url)) { $("optStatus").textContent = "The privacy address should start with https://"; return; }
+    const next = { aboutYou: $("optAbout").checked, stayInTouch: $("optTouch").checked, privacyUrl: url };
+    if (next.stayInTouch && !settings.stayInTouch &&
+        !confirm("Switch on email sign-ups?\n\nVisitors will be able to give their email address. Make sure the Society is happy to hold and use these emails, and add the privacy policy address if you have it.")) return;
+    try {
+      await setDoc(doc(db, "settings", "visitorForm"), next);
+      settings = next;
+      $("optStatus").textContent = "Saved. The visitor page uses these options from now on.";
+    } catch (err) {
+      $("optStatus").textContent = "Couldn't save: have the new security rules been published? (" + err.message + ")";
+    }
+  });
+
+  $("contactsCsv").addEventListener("click", () => {
+    if (!contacts.length) { alert("No sign-ups yet."); return; }
+    const art = Object.fromEntries(artworks.map(a => [a.id, a]));
+    const cell = (v) => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const pad = (n) => String(n).padStart(2, "0");
+    const fmt = (d) => d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
+    const rows = contacts.map(c => [c.email, fmt(c.date), c.artworkId, art[c.artworkId]?.title || "", art[c.artworkId]?.museum || ""]);
+    const csv = "﻿" + [["email", "signed_up", "artwork_id", "title", "museum"], ...rows].map(r => r.map(cell).join(",")).join("\r\n");
+    const link = document.createElement("a");
+    const d = new Date();
+    link.download = `art-engage-mailing-list-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.csv`;
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
+
+  // Horizontal bars: one row per answer, most common first; "not answered" shown in a paler bar
+  function bars(el, counts, notAnswered, limit) {
+    let rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    let more = 0;
+    if (limit && rows.length > limit) { more = rows.slice(limit).reduce((s, r) => s + r[1], 0); rows = rows.slice(0, limit); }
+    const all = rows.concat(more ? [["Other areas", more]] : []);
+    const max = Math.max(1, ...all.map(r => r[1]), notAnswered);
+    if (!all.length) { el.innerHTML = `<div class="none">No answers yet.</div>`; return; }
+    el.innerHTML = all.map(([label, n]) => `<div class="b"><span class="lab" title="${esc(label)}">${esc(label)}</span><span class="track"><span class="fill" style="width:${(n / max * 100).toFixed(1)}%"></span></span><span class="n">${n}</span></div>`).join("")
+      + (notAnswered ? `<div class="b quiet"><span class="lab">Not answered</span><span class="track"><span class="fill" style="width:${(notAnswered / max * 100).toFixed(1)}%"></span></span><span class="n">${notAnswered}</span></div>` : "");
+  }
+
+  function renderProfile() {
+    const list = filtered();
+    const a = artworks.find(x => x.id === selected);
+    $("profileScope").textContent = selected ? (a ? a.title : selected) : "All artworks";
+    const tally = (key, labels) => {
+      const counts = {}; let none = 0;
+      for (const r of list) {
+        const v = r[key];
+        if (!v) { none++; continue; }
+        const label = labels ? (labels[v] || v) : placeLabel(v);
+        counts[label] = (counts[label] || 0) + 1;
+      }
+      return [counts, none];
+    };
+    // Age in its natural order rather than by count
+    const [ageC, ageNone] = tally("ageBand", AGE_LABELS);
+    const ordered = {};
+    for (const code of Object.keys(AGE_LABELS)) if (ageC[AGE_LABELS[code]]) ordered[AGE_LABELS[code]] = ageC[AGE_LABELS[code]];
+    const ageEl = $("pAge");
+    bars(ageEl, ordered, ageNone);
+    if (Object.keys(ordered).length) {   // keep age bands in order, not sorted by count
+      const max = Math.max(1, ...Object.values(ordered), ageNone);
+      ageEl.innerHTML = Object.entries(ordered).map(([label, n]) => `<div class="b"><span class="lab">${esc(label)}</span><span class="track"><span class="fill" style="width:${(n / max * 100).toFixed(1)}%"></span></span><span class="n">${n}</span></div>`).join("")
+        + (ageNone ? `<div class="b quiet"><span class="lab">Not answered</span><span class="track"><span class="fill" style="width:${(ageNone / max * 100).toFixed(1)}%"></span></span><span class="n">${ageNone}</span></div>` : "");
+    }
+    const [gC, gNone] = tally("gender", GENDER_LABELS);
+    bars($("pGender"), gC, gNone);
+    const [pC, pNone] = tally("postcodeArea", null);
+    bars($("pPostcode"), pC, pNone, 10);
+    const answered = list.filter(r => r.ageBand || r.gender || r.postcodeArea).length;
+    $("profileNote").textContent = list.length
+      ? `${answered} of ${list.length} response${list.length === 1 ? "" : "s"} include at least one "About you" answer.`
+      : "No responses yet.";
+  }
+
   async function loadAll() {
+    loadExtras();
     $("respList").innerHTML = '<div class="empty">Loading…</div>';
     try {
       const [aSnap, rSnap] = await Promise.all([
@@ -529,6 +691,8 @@
       artworks.map(a => `<option value="${esc(a.id)}">${esc(a.id)} – ${esc(a.title || "")}</option>`).join("");
     $("filter").value = selected;
 
+    renderProfile();
+
     // Responses list
     const list = filtered();
     if (!list.length) {
@@ -543,6 +707,7 @@
           <span>${r.date ? r.date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : ""}</span>
           ${r.liked ? '<span class="heart">♥ Liked</span>' : ""}
           ${r.rating ? `<span class="stars" title="${r.rating} of 5">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>` : ""}
+          ${(r.ageBand || r.gender || r.postcodeArea) ? `<span class="tags">${[AGE_LABELS[r.ageBand], GENDER_LABELS[r.gender], r.postcodeArea ? placeLabel(r.postcodeArea) : ""].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("")}</span>` : ""}
         </div>
         <button class="btn small danger" data-act="delete" data-id="${esc(r.id)}">Delete</button>
         ${r.comment ? `<div class="comment">${esc(r.comment)}</div>` : '<div class="nocomment">No comment</div>'}
@@ -1074,7 +1239,7 @@
     };
     const pad = (n) => String(n).padStart(2, "0");
     const fmt = (d) => d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
-    const header = ["artwork_id", "title", "artist", "museum", "submitted", "liked", "rating", "comment", "comment_length", "visitor"];
+    const header = ["artwork_id", "title", "artist", "museum", "submitted", "liked", "rating", "comment", "comment_length", "age_band", "gender", "postcode_area", "visitor"];
     const rows = filtered().map(r => [
       r.artworkId,
       art[r.artworkId]?.title || "",
@@ -1085,6 +1250,9 @@
       r.rating || "",
       r.comment || "",
       (r.comment || "").length,
+      AGE_LABELS[r.ageBand] || "",
+      GENDER_LABELS[r.gender] || "",
+      r.postcodeArea ? placeLabel(r.postcodeArea) : "",
       (r.uid || "").slice(0, 8)
     ]);
     const csv = "﻿" + [header, ...rows].map(row => row.map(cell).join(",")).join("\r\n");

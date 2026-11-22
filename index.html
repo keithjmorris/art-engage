@@ -148,6 +148,41 @@
     font-weight: 500; padding: 8px 0; margin-top: 8px;
   }
 
+  /* Optional sections that open with a chevron */
+  .extra { border-top: 1px solid var(--line); margin-top: 6px; }
+  .extra > .toggle {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: none; border: 0; padding: 14px 0; text-align: left;
+  }
+  .toggle .t { flex: 1; }
+  .toggle .t b { display: block; font-weight: 600; font-size: .95rem; }
+  .toggle .t span { color: var(--muted); font-size: .85rem; }
+  .toggle svg { width: 22px; height: 22px; flex: none; stroke: var(--muted); fill: none; stroke-width: 2; transition: transform .2s; }
+  .toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .toggle:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; border-radius: 6px; }
+  .extra .body { padding: 0 0 14px; }
+  .q { margin-bottom: 16px; }
+  .q:last-child { margin-bottom: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+    padding: 8px 14px; font-size: .9rem; min-height: 40px;
+  }
+  .chip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .chip:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+  input.text {
+    width: 100%; border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 11px 12px; font: inherit; color: var(--ink); background: #fff;
+  }
+  input.text:focus { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+  input.text.short { max-width: 160px; text-transform: uppercase; }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; margin-top: 10px; }
+  .check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--accent); }
+  .smallprint { color: var(--muted); font-size: .8rem; line-height: 1.45; margin-top: 12px; }
+  .smallprint a { color: var(--accent); }
+  .fielderr { color: #a02828; font-size: .85rem; margin-top: 6px; }
+  .fieldok { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+
   .privacy { color: var(--muted); font-size: .8rem; margin-top: 18px; text-align: center; }
   .error { color: #a02828; font-size: .9rem; margin-top: 10px; }
 
@@ -212,6 +247,50 @@
         <div class="count"><span id="count">0</span> / 1000</div>
       </div>
 
+      <!-- Optional: About you -->
+      <div class="extra" id="aboutYou" hidden>
+        <button class="toggle" type="button" aria-expanded="false" aria-controls="aboutBody">
+          <span class="t"><b>About you</b><span>Optional · helps us understand who visits</span></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="body" id="aboutBody" hidden>
+          <div class="q">
+            <span class="label" id="ageLabel">Age</span>
+            <div class="chips" id="age" role="radiogroup" aria-labelledby="ageLabel"></div>
+          </div>
+          <div class="q">
+            <span class="label" id="genderLabel">Gender</span>
+            <div class="chips" id="gender" role="radiogroup" aria-labelledby="genderLabel"></div>
+          </div>
+          <div class="q">
+            <label class="label" for="postcode">First part of your postcode</label>
+            <input class="text short" id="postcode" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. AB42">
+            <label class="check"><input type="checkbox" id="outsideUk"> <span>I live outside the UK</span></label>
+            <div class="fieldok" id="postcodeNote">Just the first half, so we can see how far people travel. It can't identify you.</div>
+            <div class="fielderr" id="postcodeErr" hidden></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optional: Stay in touch -->
+      <div class="extra" id="stayInTouch" hidden>
+        <button class="toggle" type="button" aria-expanded="false" aria-controls="touchBody">
+          <span class="t"><b>Stay in touch</b><span>Optional · news from the Contemporary Art Society</span></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="body" id="touchBody" hidden>
+          <div id="touchForm">
+            <label class="label" for="email">Your email</label>
+            <input class="text" id="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com">
+            <label class="check"><input type="checkbox" id="consent"> <span>I'm 16 or over and I'd like the Contemporary Art Society to email me news about its work. I can unsubscribe at any time.</span></label>
+            <div class="fielderr" id="emailErr" hidden></div>
+            <p class="smallprint" id="touchSmallprint">Your email is kept separately from your rating and comments, so they stay anonymous. The Contemporary Art Society uses it only to send you news, never shares or sells it, and deletes it when you unsubscribe.<span id="privacyLinkWrap" hidden> <a id="privacyLink" target="_blank" rel="noopener">Privacy policy</a></span></p>
+          </div>
+          <p class="fieldok" id="touchUnder16" hidden>Thank you for your interest. We can only keep in touch by email with people aged 16 or over.</p>
+          <p class="fieldok" id="touchDone" hidden>Thank you: you're on our mailing list.</p>
+        </div>
+      </div>
+
       <button class="primary" id="send" type="button" disabled>Send</button>
       <div class="error" id="error" hidden></div>
     </section>
@@ -223,14 +302,14 @@
       <button class="secondary" id="edit" type="button">Change my response</button>
     </section>
 
-    <p class="privacy">Responses are anonymous. We don't ask for your name or email.</p>
+    <p class="privacy" id="privacyLine">Responses are anonymous. We don't ask for your name or email.</p>
   </main>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCHq1L08Hog9LbOrKIpoLej8K1bnYixCSg",
@@ -252,8 +331,15 @@
   const match = location.pathname.match(/\/a\/([^\/?#]+)/);
   const artworkId = match ? decodeURIComponent(match[1]) : new URLSearchParams(location.search).get("a");
 
-  const state = { liked: false, rating: 0, comment: "" };
+  // Optional "About you" answers. Codes are what is stored; labels are what visitors see.
+  const AGES = [["under16", "Under 16"], ["16-24", "16–24"], ["25-34", "25–34"], ["35-44", "35–44"], ["45-54", "45–54"],
+                ["55-64", "55–64"], ["65-74", "65–74"], ["75+", "75 or over"], ["prefer-not", "Prefer not to say"]];
+  const GENDERS = [["woman", "Woman"], ["man", "Man"], ["non-binary", "Non-binary"], ["other", "Another way"], ["prefer-not", "Prefer not to say"]];
+
+  const state = { liked: false, rating: 0, comment: "", ageBand: "", gender: "", postcodeArea: "", emailSent: false };
   const storageKey = "artengage:" + artworkId;
+  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "" };
+  let artwork = {};
 
   function show(id) {
     for (const s of ["loading", "notFound", "app"]) $(s).hidden = (s !== id);
@@ -308,6 +394,47 @@
     }
   }
 
+  // Chip groups behave like radio buttons; tap the chosen one again to clear it
+  function buildChips(wrapId, options, key) {
+    const wrap = $(wrapId);
+    for (const [code, label] of options) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.setAttribute("role", "radio");
+      b.dataset.code = code;
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        state[key] = state[key] === code ? "" : code;
+        renderControls();
+      });
+      wrap.appendChild(b);
+    }
+  }
+
+  // Chevron sections
+  document.querySelectorAll(".extra > .toggle").forEach(t => {
+    t.addEventListener("click", () => {
+      const open = t.getAttribute("aria-expanded") !== "true";
+      t.setAttribute("aria-expanded", String(open));
+      $(t.getAttribute("aria-controls")).hidden = !open;
+    });
+  });
+
+  // Postcode: keep only the first half (the "outward code", e.g. AB42)
+  function readPostcode() {
+    if ($("outsideUk").checked) return { code: "OUTSIDE_UK" };
+    const raw = $("postcode").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!raw) return { code: "" };
+    const full = raw.match(/^([A-Z]{1,2}[0-9][A-Z0-9]?)([0-9][A-Z]{2})$/);
+    if (full) return { code: full[1], trimmed: true };
+    if (/^[A-Z]{1,2}[0-9][A-Z0-9]?$/.test(raw)) return { code: raw };
+    return { error: "That doesn't look like the first part of a UK postcode (for example AB42 or SW1A)." };
+  }
+
+  const emailOk = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && e.length <= 254;
+  const wantsEmail = () => settings.stayInTouch && !state.emailSent && state.ageBand !== "under16" && $("email").value.trim() !== "";
+
   function renderControls() {
     $("like").setAttribute("aria-pressed", String(state.liked));
     $("likeText").textContent = state.liked ? "You like this" : "I like this";
@@ -318,8 +445,25 @@
     });
     $("ratingHint").textContent = state.rating ? RATING_WORDS[state.rating] : "Tap a star";
     $("count").textContent = state.comment.length;
-    $("send").disabled = !(state.liked || state.rating > 0 || state.comment.trim().length > 0);
+
+    for (const [wrapId, key] of [["age", "ageBand"], ["gender", "gender"]])
+      [...$(wrapId).children].forEach(b => b.setAttribute("aria-checked", String(b.dataset.code === state[key])));
+    $("postcode").disabled = $("outsideUk").checked;
+
+    // Email: not offered to under-16s, and only once per phone
+    const under16 = state.ageBand === "under16";
+    $("touchForm").hidden = under16 || state.emailSent;
+    $("touchUnder16").hidden = !under16 || state.emailSent;
+    $("touchDone").hidden = !state.emailSent;
+
+    const answered = state.liked || state.rating > 0 || state.comment.trim().length > 0;
+    $("send").disabled = !(answered || wantsEmail());
   }
+
+  $("outsideUk").addEventListener("change", () => { $("postcodeErr").hidden = true; renderControls(); });
+  $("postcode").addEventListener("input", () => { $("postcodeErr").hidden = true; });
+  $("email").addEventListener("input", () => { $("emailErr").hidden = true; renderControls(); });
+  $("consent").addEventListener("change", () => { $("emailErr").hidden = true; });
 
   // ---------- Events ----------
   $("like").addEventListener("click", () => { state.liked = !state.liked; renderControls(); });
@@ -330,22 +474,77 @@
     $("send").textContent = "Update my response";
   });
 
+  function openSection(id) {
+    const t = $(id).querySelector(".toggle");
+    t.setAttribute("aria-expanded", "true");
+    $(t.getAttribute("aria-controls")).hidden = false;
+  }
+
   $("send").addEventListener("click", async () => {
     const btn = $("send");
     $("error").hidden = true;
+
+    // Check the optional fields before sending anything
+    if (settings.aboutYou) {
+      const pc = readPostcode();
+      if (pc.error) {
+        openSection("aboutYou");
+        $("postcodeErr").textContent = pc.error;
+        $("postcodeErr").hidden = false;
+        $("postcode").focus();
+        return;
+      }
+      state.postcodeArea = pc.code;
+      if (pc.trimmed) $("postcode").value = pc.code;   // show that only the first half is kept
+    }
+    const sendEmail = wantsEmail();
+    if (sendEmail) {
+      const email = $("email").value.trim();
+      let msg = "";
+      if (!emailOk(email)) msg = "Please check your email address.";
+      else if (!$("consent").checked) msg = "Please tick the box to agree to receive emails, or clear your email address.";
+      if (msg) {
+        openSection("stayInTouch");
+        $("emailErr").textContent = msg;
+        $("emailErr").hidden = false;
+        return;
+      }
+    }
+
     btn.disabled = true;
     const original = btn.textContent;
     btn.textContent = "Sending…";
     try {
       const user = auth.currentUser || (await signInAnonymously(auth)).user;
-      await setDoc(doc(db, "responses", artworkId + "_" + user.uid), {
-        artworkId,
-        uid: user.uid,
-        liked: state.liked,
-        rating: state.rating,
-        comment: state.comment.trim().slice(0, 1000),
-        submittedAt: serverTimestamp()
-      });
+      const answered = state.liked || state.rating > 0 || state.comment.trim().length > 0;
+      if (answered) {
+        const data = {
+          artworkId,
+          uid: user.uid,
+          liked: state.liked,
+          rating: state.rating,
+          comment: state.comment.trim().slice(0, 1000),
+          submittedAt: serverTimestamp()
+        };
+        if (settings.aboutYou) {
+          data.ageBand = state.ageBand;
+          data.gender = state.gender;
+          data.postcodeArea = state.postcodeArea;
+        }
+        await setDoc(doc(db, "responses", artworkId + "_" + user.uid), data);
+      }
+      if (sendEmail) {
+        // Stored on its own, with no link to the response, so ratings and comments stay anonymous
+        await addDoc(collection(db, "contacts"), {
+          email: $("email").value.trim().toLowerCase(),
+          consent: true,
+          artworkId,
+          createdAt: serverTimestamp()
+        });
+        state.emailSent = true;
+        $("email").value = "";
+        $("consent").checked = false;
+      }
       saveLocal();
       $("formCard").hidden = true;
       $("thanksCard").hidden = false;
@@ -368,12 +567,25 @@
       return;
     }
     try {
-      const snap = await getDoc(doc(db, "artworks", artworkId));
+      const [snap, setSnap] = await Promise.all([
+        getDoc(doc(db, "artworks", artworkId)),
+        getDoc(doc(db, "settings", "visitorForm")).catch(() => null)   // no settings yet: optional sections stay off
+      ]);
       if (!snap.exists() || snap.data().active === false) { show("notFound"); return; }
-      renderArtwork(snap.data());
+      if (setSnap && setSnap.exists()) settings = { ...settings, ...setSnap.data() };
+      artwork = snap.data();
+      renderArtwork(artwork);
       buildStars();
+      buildChips("age", AGES, "ageBand");
+      buildChips("gender", GENDERS, "gender");
+      $("aboutYou").hidden = !settings.aboutYou;
+      $("stayInTouch").hidden = !settings.stayInTouch;
+      if (settings.privacyUrl) { $("privacyLink").href = settings.privacyUrl; $("privacyLinkWrap").hidden = false; }
+      if (settings.stayInTouch) $("privacyLine").textContent = "Responses are anonymous. If you give us your email, it is kept separately.";
       const hadSaved = loadSaved();
       $("comment").value = state.comment;
+      if (state.postcodeArea === "OUTSIDE_UK") $("outsideUk").checked = true;
+      else $("postcode").value = state.postcodeArea;
       renderControls();
       if (hadSaved) {
         $("formCard").hidden = true;
