@@ -183,6 +183,24 @@
   .fielderr { color: #a02828; font-size: .85rem; margin-top: 6px; }
   .fieldok { color: var(--muted); font-size: .85rem; margin-top: 6px; }
 
+  /* Your visit */
+  .later { text-align: center; margin: 6px 0 0; }
+  .later .secondary { font-size: .92rem; }
+  .visit .vrow {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-top: 1px solid var(--line); text-decoration: none; color: inherit;
+  }
+  .visit .vrow:first-child { border-top: 0; padding-top: 0; }
+  .visit .vrow img, .visit .vrow .noimg { width: 44px; height: 54px; object-fit: cover; border-radius: 4px; background: #e9e5de; flex: none; }
+  .visit .vrow .vt { flex: 1; min-width: 0; }
+  .visit .vrow .vt div:first-child { font-weight: 500; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .visit .vrow .vt div:last-child { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .visit .status { font-size: .8rem; font-weight: 600; border-radius: 99px; padding: 3px 10px; white-space: nowrap; flex: none; }
+  .visit .status.done { background: #e6f2e8; color: #2e6b3a; }
+  .visit .status.todo { background: var(--accent-soft); color: var(--accent); }
+  .visit .status.here { background: #f0eee9; color: var(--muted); }
+  .visitnote { color: var(--muted); font-size: .78rem; margin: 12px 0 0; }
+
   /* Support (demo) */
   .give { padding: 12px 0; border-top: 1px solid var(--line); }
   .give:first-of-type { border-top: 0; padding-top: 0; }
@@ -313,6 +331,7 @@
 
       <button class="primary" id="send" type="button" disabled>Send</button>
       <div class="error" id="error" hidden></div>
+      <p class="later" id="laterWrap" hidden><button class="secondary" id="later" type="button">Not now, I'll respond later</button></p>
     </section>
 
     <section class="card thanks" id="thanksCard" hidden>
@@ -323,6 +342,14 @@
     </section>
 
     <!-- Optional: Support (demo only, no payment taken) -->
+    <!-- Your visit: works scanned on this phone today (kept only on the phone) -->
+    <section class="card visit" id="visitCard" hidden>
+      <h2>Your visit</h2>
+      <p class="sub" id="visitSub">Works you've scanned today. Tap one to share your thoughts on it.</p>
+      <div id="visitList"></div>
+      <p class="visitnote">This list is kept only on your phone and clears itself after the day.</p>
+    </section>
+
     <section class="card support" id="supportCard" hidden>
       <h2>Support</h2>
       <p class="sub">If you enjoyed this work, you can help.</p>
@@ -388,7 +415,7 @@
 
   const state = { liked: false, rating: 0, comment: "", ageBand: "", gender: "", postcodeArea: "", emailSent: false };
   const storageKey = "artengage:" + artworkId;
-  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "", showDonate: false, showSponsor: false };
+  let settings = { aboutYou: false, stayInTouch: false, privacyUrl: "", showDonate: false, showSponsor: false, showVisit: true };
   let artwork = {};
 
   function show(id) {
@@ -598,6 +625,7 @@
       saveLocal();
       $("formCard").hidden = true;
       $("thanksCard").hidden = false;
+      renderVisit();
     } catch (err) {
       console.error(err);
       $("error").textContent = "Sorry, that didn't send. Please check your connection and try again.";
@@ -606,6 +634,66 @@
       btn.textContent = original;
       renderControls();
     }
+  });
+
+  // ---------- Your visit (kept only on this phone, cleared after 12 hours) ----------
+  const VISIT_KEY = "artengage:visit";
+  const VISIT_HOURS = 12;
+  let laterChosen = false;
+
+  function readVisit() {
+    try {
+      const cutoff = Date.now() - VISIT_HOURS * 3600e3;
+      return (JSON.parse(localStorage.getItem(VISIT_KEY) || "[]") || []).filter(v => v && v.id && v.seenAt > cutoff);
+    } catch { return []; }
+  }
+
+  function recordVisit() {
+    const list = readVisit().filter(v => v.id !== artworkId);
+    list.push({
+      id: artworkId, seenAt: Date.now(),
+      title: artwork.title || "", artist: artwork.artist || "", year: artwork.year || "", imageUrl: artwork.imageUrl || ""
+    });
+    try { localStorage.setItem(VISIT_KEY, JSON.stringify(list.slice(-60))); } catch {}
+  }
+
+  // Has this phone sent a rating, like or comment for a work?
+  function responded(id) {
+    try {
+      const s = JSON.parse(localStorage.getItem("artengage:" + id) || "null");
+      return !!(s && (s.liked || s.rating > 0 || (s.comment || "").trim()));
+    } catch { return false; }
+  }
+
+  function renderVisit() {
+    if (!settings.showVisit) { $("visitCard").hidden = true; return; }
+    const list = readVisit().sort((a, b) => a.seenAt - b.seenAt);     // in the order they were seen
+    // Show the list once there's more than this one work, or when the visitor chose "later"
+    if (list.length < 2 && !laterChosen) { $("visitCard").hidden = true; return; }
+    const todo = list.filter(v => !responded(v.id)).length;
+    $("visitSub").textContent = todo
+      ? `Works you've scanned today. ${todo} still to respond to: tap one to share your thoughts.`
+      : "Works you've scanned today. Thank you for responding to them all.";
+    const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    $("visitList").innerHTML = list.map(v => {
+      const here = v.id === artworkId;
+      const done = responded(v.id);
+      const status = done ? '<span class="status done">Done ✓</span>'
+                   : here ? '<span class="status here">This work</span>'
+                   : '<span class="status todo">Respond</span>';
+      const pic = v.imageUrl ? `<img src="${esc(v.imageUrl)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'noimg'}))">` : '<span class="noimg"></span>';
+      const inner = `${pic}<div class="vt"><div>${esc(v.title || "Artwork " + v.id)}</div><div>${esc([v.artist, v.year].filter(Boolean).join(", "))}</div></div>${status}`;
+      return here
+        ? `<div class="vrow" aria-current="page">${inner}</div>`
+        : `<a class="vrow" href="/a/${encodeURIComponent(v.id)}">${inner}</a>`;
+    }).join("");
+    $("visitCard").hidden = false;
+  }
+
+  $("later").addEventListener("click", () => {
+    laterChosen = true;
+    renderVisit();
+    $("visitCard").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   // ---------- Support buttons (demo: nothing is charged or recorded) ----------
@@ -674,6 +762,7 @@
       if (settings.privacyUrl) { $("privacyLink").href = settings.privacyUrl; $("privacyLinkWrap").hidden = false; }
       if (settings.stayInTouch) $("privacyLine").textContent = "Responses are anonymous. If you give us your email, it is kept separately.";
       setupSupport();
+      if (settings.showVisit) { recordVisit(); $("laterWrap").hidden = false; }
       const hadSaved = loadSaved();
       $("comment").value = state.comment;
       if (state.postcodeArea === "OUTSIDE_UK") $("outsideUk").checked = true;
@@ -684,6 +773,7 @@
         $("thanksCard").hidden = false;
         $("send").textContent = "Update my response";
       }
+      renderVisit();
       show("app");
     } catch (err) {
       console.error(err);
