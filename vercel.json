@@ -1,6 +1,16 @@
 {
   "rewrites": [
-    { "source": "/a/:id", "destination": "/index.html" },
-    { "source": "/admin", "destination": "/admin.html" }
+    {
+      "source": "/a/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/museum",
+      "destination": "/museum.html"
+    }
   ]
 }

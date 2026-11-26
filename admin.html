@@ -96,6 +96,8 @@
   .login .forgot .link { font-size: 13px; }
   .ok { color: #2e6b3a; font-size: 13px; margin-top: 10px; }
   .admins-body { padding: 16px 18px; }
+  #muAddForm select { width: auto; min-width: 220px; }
+  #tidyBox { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
   .profile { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 16px 18px 4px; }
   @media (max-width: 800px) { .profile { grid-template-columns: 1fr; } }
   .profile h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -254,6 +256,23 @@
           <button class="btn primary" id="optSave" type="button">Save options</button>
           <span class="hint" id="optStatus"></span>
         </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Museum logins</h2>
+      </div>
+      <div class="admins-body">
+        <p class="hint" style="margin:0 0 12px">Museum staff sign in at <b>art-engage.vercel.app/museum</b> and see only their own museum's works and responses. To add someone: first create their login in Firebase (Authentication → <b>Add user</b>), then add the same email here and choose their museum. Only museums whose works are in the app are listed; import a museum first if it's missing.</p>
+        <form id="muAddForm" class="lookup">
+          <input type="email" id="muEmail" placeholder="staff.member@museum.org.uk" required autocomplete="off">
+          <select id="muMuseum" aria-label="Museum" required></select>
+          <button class="btn primary" type="submit">Add</button>
+        </form>
+        <div class="err" id="muErr" hidden></div>
+        <div id="muList" class="worklist"></div>
+        <div class="found" id="tidyBox" hidden></div>
       </div>
     </section>
 
@@ -475,6 +494,117 @@
   });
 
   // ---------- Administrators (owner only) ----------
+  // ---------- Museum logins ----------
+  let museumUsers = [];
+
+  async function loadMuseumUsers() {
+    try {
+      const snap = await getDocs(collection(db, "museumUsers"));
+      museumUsers = snap.docs.map(d => ({ email: d.id, ...d.data() })).sort((a, b) =>
+        (a.museumName || "").localeCompare(b.museumName || "") || a.email.localeCompare(b.email));
+    } catch { museumUsers = null; }
+    renderMuseumLogins();
+  }
+
+  // Museums the app holds works for, keyed by catalogue museum ID
+  function museumsInApp() {
+    const m = new Map();
+    for (const a of artworks) if (a.museumId && !m.has(a.museumId)) m.set(a.museumId, (a.museum || "").split(";")[0].trim() || a.museumId);
+    return [...m.entries()].sort((x, y) => x[1].localeCompare(y[1]));
+  }
+
+  function renderMuseumLogins() {
+    const ms = museumsInApp();
+    const prev = $("muMuseum").value;
+    $("muMuseum").innerHTML = `<option value="">Choose museum…</option>` + ms.map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("");
+    if (ms.some(([id]) => id === prev)) $("muMuseum").value = prev;
+    if (museumUsers === null) {
+      $("muList").innerHTML = `<div class="empty">Couldn't load museum logins. Have the new security rules been published in Firebase?</div>`;
+    } else {
+      $("muList").innerHTML = museumUsers.length ? museumUsers.map(u => `<div class="w"><div class="t"><div>${esc(u.email)}</div><div>${esc(u.museumName || u.museumId)}</div></div>
+        <button class="btn small danger" type="button" data-remove-mu="${esc(u.email)}">Remove</button></div>`).join("")
+        : `<div class="empty">No museum logins yet.</div>`;
+    }
+    renderTidy();
+  }
+
+  $("muAddForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("muEmail").value.trim().toLowerCase();
+    const museumId = $("muMuseum").value;
+    $("muErr").hidden = true;
+    const fail = (m) => { $("muErr").textContent = m; $("muErr").hidden = false; };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That doesn't look like an email address.");
+    if (!museumId) return fail("Please choose the museum.");
+    const museumName = (museumsInApp().find(([id]) => id === museumId) || [, ""])[1];
+    try {
+      await setDoc(doc(db, "museumUsers", email), { museumId, museumName, addedAt: serverTimestamp(), addedBy: auth.currentUser.email.toLowerCase() });
+      $("muEmail").value = "";
+      loadMuseumUsers();
+    } catch (err) { fail("Couldn't add: " + err.message); }
+  });
+
+  $("muList").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-remove-mu]");
+    if (!b) return;
+    const email = b.dataset.removeMu;
+    if (!confirm(`Remove ${email}'s museum access?\n\nTheir Firebase login stays until you delete it in Firebase.`)) return;
+    try { await deleteDoc(doc(db, "museumUsers", email)); loadMuseumUsers(); }
+    catch (err) { alert("Couldn't remove: " + err.message); }
+  });
+
+  // One-off tidy-up: works added before museum IDs were stored, and responses saved before they were tagged
+  function tidyCounts() {
+    const byId = Object.fromEntries(artworks.map(a => [a.id, a]));
+    const worksMissing = artworks.filter(a => !a.museumId && /^\d+$/.test(a.id));
+    const respMissing = responses.filter(r => !r.museumId && byId[r.artworkId] && byId[r.artworkId].museumId);
+    return { worksMissing, respMissing };
+  }
+
+  function renderTidy() {
+    const { worksMissing, respMissing } = tidyCounts();
+    const box = $("tidyBox");
+    if (!worksMissing.length && !respMissing.length) { box.hidden = true; return; }
+    box.className = "found";
+    box.innerHTML = `<div style="flex:1"><b>Tidy-up needed before museums sign in.</b><br>`
+      + [worksMissing.length ? `${worksMissing.length} work${worksMissing.length === 1 ? " has" : "s have"} no museum link yet` : "",
+         respMissing.length ? `${respMissing.length} earlier response${respMissing.length === 1 ? " isn't" : "s aren't"} tagged with a museum` : ""].filter(Boolean).join(" · ")
+      + `</div><button class="btn small" type="button" id="tidyGo">Fix now</button>`;
+    box.hidden = false;
+  }
+
+  document.addEventListener("click", async (e) => {
+    if (e.target.id !== "tidyGo") return;
+    const btn = e.target;
+    btn.disabled = true;
+    try {
+      // 1. Fill in missing museum links on works from the catalogue
+      let { worksMissing } = tidyCounts();
+      for (const [i, a] of worksMissing.entries()) {
+        btn.textContent = `Works ${i + 1}/${worksMissing.length}…`;
+        const r = await fetch("/api/cas?nid=" + encodeURIComponent(a.id));
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (d.museumId) await setDoc(doc(db, "artworks", a.id), { museumId: d.museumId, ...(a.museum ? {} : { museum: d.museum }) }, { merge: true });
+      }
+      await loadAll();
+      // 2. Tag earlier responses with their work's museum
+      const { respMissing } = tidyCounts();
+      const byId = Object.fromEntries(artworks.map(a => [a.id, a]));
+      for (let i = 0; i < respMissing.length; i += 400) {
+        btn.textContent = `Responses ${Math.min(i + 400, respMissing.length)}/${respMissing.length}…`;
+        const batch = writeBatch(db);
+        for (const r of respMissing.slice(i, i + 400)) batch.update(doc(db, "responses", r.id), { museumId: byId[r.artworkId].museumId });
+        await batch.commit();
+      }
+      await loadAll();
+    } catch (err) {
+      alert("Tidy-up stopped: " + err.message);
+      btn.disabled = false;
+      btn.textContent = "Fix now";
+    }
+  });
+
   async function loadAdmins() {
     try {
       const snap = await getDocs(collection(db, "admins"));
@@ -648,6 +778,7 @@
         return { id: d.id, ...r, date: r.submittedAt ? r.submittedAt.toDate() : null };
       });
       render();
+      loadMuseumUsers();
     } catch (err) {
       console.error(err);
       $("respList").innerHTML = '<div class="empty">Couldn\'t load data. Have the security rules been published in Firebase?</div>';

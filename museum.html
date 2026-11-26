@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art Engage · Museum</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ef; --card: #fff; --ink: #1d1b20; --muted: #6d6873; --line: #e4dfd6;
+    --accent: #5b3f8f; --accent-soft: #efe9f8; --heart: #c8324f; --star: #d39a1c; --danger: #a02828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: Inter, -apple-system, system-ui, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.5; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2 { font-family: Fraunces, Georgia, serif; font-weight: 500; margin: 0; }
+  [hidden] { display: none !important; }
+
+  .btn { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 8px 14px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: #cfc8bc; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .btn.danger { color: var(--danger); }
+  .link { background: none; border: 0; color: var(--accent); font-weight: 500; padding: 0; }
+
+  /* Login */
+  .login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  .login form { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 28px; }
+  .login h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  .login p { color: var(--muted); margin: 0 0 20px; }
+  label.f { display: block; font-weight: 500; font-size: 13px; margin: 12px 0 4px; }
+  input[type=text], input[type=email], input[type=password], input[type=url], select {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; background: #fff;
+  }
+  input:focus, select:focus { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+  .login .btn.primary { width: 100%; margin-top: 18px; padding: 11px; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
+
+  /* Layout */
+  header.top { background: #1d1a22; color: #fff; }
+  header.top .in { max-width: 1100px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  header.top h1 { font-size: 1.3rem; flex: 1; }
+  header.top .who { color: #b9b3c2; font-size: 13px; }
+  header.top .btn { background: transparent; color: #fff; border-color: #4a4553; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { color: var(--muted); font-size: 13px; }
+  .tile .v { font-family: Fraunces, Georgia, serif; font-size: 1.9rem; line-height: 1.2; }
+
+  section.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-top: 20px; overflow: hidden; }
+  .panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: 1.2rem; flex: 1; }
+  .panel-head select { width: auto; min-width: 200px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: #faf8f5; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  tr.sel td { background: var(--accent-soft); }
+  .art { display: flex; align-items: center; gap: 10px; }
+  .art img { width: 36px; height: 44px; object-fit: cover; border-radius: 4px; background: #ddd; }
+  .art .id { color: var(--muted); font-size: 12px; }
+  .actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .inactive { font-size: 11px; background: #eee; color: var(--muted); border-radius: 99px; padding: 1px 7px; margin-left: 6px; }
+
+  .resp { padding: 14px 18px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .resp:last-child { border-bottom: 0; }
+  .resp .line1 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .resp .line1 b { color: var(--ink); font-weight: 600; }
+  .resp .heart { color: var(--heart); }
+  .resp .stars { color: var(--star); letter-spacing: 1px; }
+  .resp .comment { grid-column: 1 / -1; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .resp .nocomment { grid-column: 1 / -1; color: #aaa; font-size: 13px; font-style: italic; }
+  .empty { padding: 30px 18px; color: var(--muted); text-align: center; }
+
+  /* Dialogs */
+  dialog { border: 0; border-radius: 14px; padding: 0; width: min(460px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(20,18,24,.45); }
+  dialog form, dialog .body { padding: 22px; }
+  dialog h2 { font-size: 1.3rem; margin-bottom: 4px; }
+  dialog .hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  #artForm .buttons { position: sticky; bottom: -22px; background: #fff; margin: 20px -22px -22px; padding: 14px 22px; border-top: 1px solid var(--line); }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .login .forgot { margin: 14px 0 0; text-align: center; }
+  .login .forgot .link { font-size: 13px; }
+  .ok { color: #2e6b3a; font-size: 13px; margin-top: 10px; }
+  .admins-body { padding: 16px 18px; }
+  #muAddForm select { width: auto; min-width: 220px; }
+  #tidyBox { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .profile { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 16px 18px 4px; }
+  @media (max-width: 800px) { .profile { grid-template-columns: 1fr; } }
+  .profile h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .bars .b { display: grid; grid-template-columns: 110px 1fr 34px; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
+  .bars .b .lab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bars .b .track { display: block; height: 10px; background: #f0eee9; border-radius: 99px; overflow: hidden; }
+  .bars .b .fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+  .bars .b.quiet .fill { background: #cfc8d9; }
+  .bars .b .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .bars .none { color: var(--muted); font-size: 13px; }
+  .profile-note { padding: 8px 18px 16px; margin: 0; }
+  .opts { padding: 16px 18px; max-width: 640px; }
+  .optrow { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; cursor: pointer; }
+  .optrow input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
+  .optsave { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .resp .tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .resp .tags span { background: #f0eee9; border-radius: 99px; padding: 0 8px; font-size: 12px; color: var(--muted); }
+  .admins-body .worklist { margin-top: 14px; }
+  dialog.wide { width: min(760px, calc(100vw - 32px)); }
+  .pick { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .pick button { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; }
+  .pick button:hover, .pick button.on { border-color: var(--accent); background: var(--accent-soft); }
+  .worklist { max-height: 300px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .worklist:empty { display: none; }
+  .worklist .w { display: flex; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .worklist .w:last-child { border-bottom: 0; }
+  .worklist .w img { width: 30px; height: 36px; object-fit: cover; border-radius: 3px; background: #eee; flex: none; }
+  .worklist .w .t { flex: 1; min-width: 0; }
+  .worklist .w .t div:last-child { color: var(--muted); font-size: 12px; }
+  .worklist .tag { font-size: 11px; color: var(--muted); background: #f0eee9; border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
+  .worklist .tag.done { background: #e6f2e8; color: #2e6b3a; }
+  .worklist.checks .w { cursor: pointer; }
+  .lblgrid { display: grid; grid-template-columns: 1fr 180px; gap: 18px; margin-top: 12px; }
+  @media (max-width: 640px) { .lblgrid { grid-template-columns: 1fr; } }
+  .listhead { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .sheetpick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 120px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: #faf8f5; }
+  .sheetpick button { height: 26px; border: 1px solid var(--line); background: #fff; border-radius: 3px; font-size: 11px; color: var(--muted); padding: 0; }
+  .sheetpick button.used { background: #eee; color: #bbb; text-decoration: line-through; }
+  .sheetpick button.start { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .adjust { margin-top: 14px; font-size: 13px; }
+  .adjust summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+  .adjust input { width: 90px; }
+  .lookup { display: flex; gap: 8px; }
+  .lookup input { flex: 1; }
+  .found { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 10px; background: var(--accent-soft); border-radius: 10px; font-size: 13px; }
+  .found img { width: 48px; height: 60px; object-fit: cover; border-radius: 4px; background: #ddd; }
+  .found.err { background: #fbecec; color: var(--danger); }
+  #qrCanvas { display: block; margin: 14px auto; width: 240px; height: 240px; image-rendering: pixelated; }
+  .qrurl { text-align: center; font-family: ui-monospace, Menlo, monospace; font-size: 13px; word-break: break-all; color: var(--muted); }
+</style>
+<style>
+  .museum-name { color: #b9b3c2; font-size: 13px; }
+  .table-wrap td .art { min-width: 220px; }
+  .muted-note { padding: 10px 18px 16px; margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- Sign in -->
+<div class="login" id="loginView" hidden>
+  <form id="loginForm">
+    <h1>Art Engage</h1>
+    <p>Museum sign in</p>
+    <label class="f" for="email">Email</label>
+    <input type="email" id="email" autocomplete="username" required>
+    <label class="f" for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button class="btn primary" type="submit">Sign in</button>
+    <div class="err" id="loginErr" hidden></div>
+    <p class="forgot"><button class="link" type="button" id="forgot">Forgotten your password, or setting one for the first time?</button></p>
+    <div class="ok" id="loginOk" hidden></div>
+  </form>
+</div>
+
+<!-- Dashboard -->
+<div id="dashView" hidden>
+  <header class="top"><div class="in">
+    <h1 id="museumTitle">Art Engage</h1>
+    <span class="who" id="who"></span>
+    <button class="btn small" id="refresh">Refresh</button>
+    <button class="btn small" id="signout">Sign out</button>
+  </div></header>
+
+  <main>
+    <div class="tiles">
+      <div class="tile"><div class="k">Responses</div><div class="v" id="tResp">–</div></div>
+      <div class="tile"><div class="k">Visitors</div><div class="v" id="tVis">–</div></div>
+      <div class="tile"><div class="k">Likes</div><div class="v" id="tLikes">–</div></div>
+      <div class="tile"><div class="k">Average rating</div><div class="v" id="tAvg">–</div></div>
+      <div class="tile"><div class="k">Comments</div><div class="v" id="tCom">–</div></div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Your Contemporary Art Society works</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Artwork</th><th class="num">Responses</th><th class="num">Likes</th>
+            <th class="num">Avg rating</th><th class="num">Comments</th><th></th>
+          </tr></thead>
+          <tbody id="artRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="artEmpty" hidden>No works are set up for your museum yet.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Who's responding</h2>
+        <span class="hint" id="profileScope">All works</span>
+      </div>
+      <div class="profile">
+        <div><h3>Age</h3><div id="pAge" class="bars"></div></div>
+        <div><h3>Gender</h3><div id="pGender" class="bars"></div></div>
+        <div><h3>Where they live (postcode area)</h3><div id="pPostcode" class="bars"></div></div>
+      </div>
+      <p class="hint profile-note" id="profileNote"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Responses</h2>
+        <select id="filter" aria-label="Filter by artwork"></select>
+        <button class="btn" id="csv">Download CSV</button>
+      </div>
+      <div id="respList"></div>
+      <p class="hint muted-note">Comments appear as visitors wrote them. If you see one that should be removed, please contact the Contemporary Art Society.</p>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCHq1L08Hog9LbOrKIpoLej8K1bnYixCSg",
+    authDomain: "art-engage.firebaseapp.com",
+    projectId: "art-engage",
+    storageBucket: "art-engage.firebasestorage.app",
+    messagingSenderId: "1090220532946",
+    appId: "1:1090220532946:web:c65ed3cb77f6a19abb390b"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const AGE_LABELS = { "under16": "Under 16", "16-24": "16–24", "25-34": "25–34", "35-44": "35–44", "45-54": "45–54",
+    "55-64": "55–64", "65-74": "65–74", "75+": "75 or over", "prefer-not": "Prefer not to say" };
+  const GENDER_LABELS = { "woman": "Woman", "man": "Man", "non-binary": "Non-binary", "other": "Another way", "prefer-not": "Prefer not to say" };
+  const placeLabel = (p) => p === "OUTSIDE_UK" ? "Outside the UK" : p;
+
+  let me = null;          // { museumId, museumName }
+  let artworks = [];
+  let responses = [];
+  let selected = "";
+
+  // ---------- Sign in ----------
+  onAuthStateChanged(auth, async (user) => {
+    me = null;
+    if (user && !user.isAnonymous && user.email) {
+      try {
+        const snap = await getDoc(doc(db, "museumUsers", user.email.toLowerCase()));
+        if (snap.exists()) me = snap.data();
+      } catch {}
+    }
+    if (me) {
+      $("museumTitle").textContent = me.museumName || "Your museum";
+      document.title = "Art Engage · " + (me.museumName || "Museum");
+      $("who").textContent = user.email;
+      $("loginErr").hidden = true;
+      $("loginView").hidden = true;
+      $("dashView").hidden = false;
+      loadAll();
+    } else {
+      $("dashView").hidden = true;
+      $("loginView").hidden = false;
+      if (user && !user.isAnonymous) {
+        $("loginErr").textContent = "This account isn't linked to a museum. Please contact the Contemporary Art Society.";
+        $("loginErr").hidden = false;
+      }
+    }
+  });
+
+  $("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("loginErr").hidden = true;
+    try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); }
+    catch { $("loginErr").textContent = "Sign in failed. Please check your email and password."; $("loginErr").hidden = false; }
+  });
+  $("signout").addEventListener("click", () => signOut(auth));
+  $("refresh").addEventListener("click", () => loadAll());
+
+  $("forgot").addEventListener("click", async () => {
+    const email = $("email").value.trim();
+    $("loginErr").hidden = true; $("loginOk").hidden = true;
+    if (!email) { $("loginErr").textContent = "Type your email address above first, then click this link."; $("loginErr").hidden = false; return; }
+    try { await sendPasswordResetEmail(auth, email); } catch {}
+    $("loginOk").textContent = "If that email has an account, a link to set a new password is on its way. Check junk mail too.";
+    $("loginOk").hidden = false;
+  });
+
+  // ---------- Data: only this museum's works and responses ----------
+  async function loadAll() {
+    $("respList").innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const [aSnap, rSnap] = await Promise.all([
+        getDocs(query(collection(db, "artworks"), where("museumId", "==", me.museumId))),
+        getDocs(query(collection(db, "responses"), where("museumId", "==", me.museumId)))
+      ]);
+      artworks = aSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+      responses = rSnap.docs.map(d => { const r = d.data(); return { id: d.id, ...r, date: r.submittedAt ? r.submittedAt.toDate() : null }; })
+        .sort((a, b) => (b.date || 0) - (a.date || 0));
+      render();
+    } catch (err) {
+      console.error(err);
+      $("respList").innerHTML = '<div class="empty">Couldn\'t load your data. Please try again, or contact the Contemporary Art Society.</div>';
+    }
+  }
+
+  function stats(list) {
+    const rated = list.filter(r => r.rating > 0);
+    return {
+      count: list.length,
+      visitors: new Set(list.map(r => r.uid)).size,
+      likes: list.filter(r => r.liked).length,
+      avg: rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : null,
+      comments: list.filter(r => r.comment && r.comment.trim()).length
+    };
+  }
+  const filtered = () => selected ? responses.filter(r => r.artworkId === selected) : responses;
+
+  // ---------- Rendering ----------
+  function render() {
+    const s = stats(responses);
+    $("tResp").textContent = s.count;
+    $("tVis").textContent = s.visitors;
+    $("tLikes").textContent = s.likes;
+    $("tAvg").textContent = s.avg == null ? "–" : s.avg.toFixed(1) + " ★";
+    $("tCom").textContent = s.comments;
+
+    $("artEmpty").hidden = artworks.length > 0;
+    $("artRows").innerHTML = artworks.map(a => {
+      const st = stats(responses.filter(r => r.artworkId === a.id));
+      return `<tr class="${selected === a.id ? "sel" : ""}">
+        <td><div class="art">
+          ${a.imageUrl ? `<img src="${esc(a.imageUrl)}" alt="" loading="lazy">` : ""}
+          <div><div>${esc(a.title || a.id)}</div><div class="id">${esc([a.artist, a.year].filter(Boolean).join(", "))} · ${esc(a.id)}</div></div>
+        </div></td>
+        <td class="num">${st.count}</td><td class="num">${st.likes}</td>
+        <td class="num">${st.avg == null ? "–" : st.avg.toFixed(1)}</td><td class="num">${st.comments}</td>
+        <td><div class="actions"><button class="btn small" data-view="${esc(a.id)}">Responses</button></div></td>
+      </tr>`;
+    }).join("");
+
+    $("filter").innerHTML = `<option value="">All works</option>` +
+      artworks.map(a => `<option value="${esc(a.id)}">${esc(a.title || a.id)}</option>`).join("");
+    $("filter").value = selected;
+
+    renderProfile();
+
+    const list = filtered();
+    if (!list.length) { $("respList").innerHTML = '<div class="empty">No responses yet.</div>'; return; }
+    const titleOf = (id) => (artworks.find(a => a.id === id) || {}).title || id;
+    $("respList").innerHTML = list.map(r => `
+      <div class="resp">
+        <div class="line1">
+          <b>${esc(titleOf(r.artworkId))}</b>
+          <span>${r.date ? r.date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : ""}</span>
+          ${r.liked ? '<span class="heart">♥ Liked</span>' : ""}
+          ${r.rating ? `<span class="stars" title="${r.rating} of 5">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>` : ""}
+          ${(r.ageBand || r.gender || r.postcodeArea) ? `<span class="tags">${[AGE_LABELS[r.ageBand], GENDER_LABELS[r.gender], r.postcodeArea ? placeLabel(r.postcodeArea) : ""].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("")}</span>` : ""}
+        </div>
+        <span></span>
+        ${r.comment ? `<div class="comment">${esc(r.comment)}</div>` : '<div class="nocomment">No comment</div>'}
+      </div>`).join("");
+  }
+
+  function barsHtml(rows, notAnswered) {
+    const max = Math.max(1, ...rows.map(r => r[1]), notAnswered);
+    const row = (label, n, quiet) => `<div class="b${quiet ? " quiet" : ""}"><span class="lab" title="${esc(label)}">${esc(label)}</span><span class="track"><span class="fill" style="width:${(n / max * 100).toFixed(1)}%"></span></span><span class="n">${n}</span></div>`;
+    if (!rows.length) return `<div class="none">No answers yet.</div>`;
+    return rows.map(([l, n]) => row(l, n)).join("") + (notAnswered ? row("Not answered", notAnswered, true) : "");
+  }
+
+  function renderProfile() {
+    const list = filtered();
+    const a = artworks.find(x => x.id === selected);
+    $("profileScope").textContent = selected ? (a ? a.title : selected) : "All works";
+    const tally = (key, map) => {
+      const c = {}; let none = 0;
+      for (const r of list) { const v = r[key]; if (!v) { none++; continue; } const l = map ? (map[v] || v) : placeLabel(v); c[l] = (c[l] || 0) + 1; }
+      return [c, none];
+    };
+    const [ageC, ageNone] = tally("ageBand", AGE_LABELS);
+    $("pAge").innerHTML = barsHtml(Object.values(AGE_LABELS).filter(l => ageC[l]).map(l => [l, ageC[l]]), ageNone);
+    const [gC, gNone] = tally("gender", GENDER_LABELS);
+    $("pGender").innerHTML = barsHtml(Object.entries(gC).sort((x, y) => y[1] - x[1]), gNone);
+    const [pC, pNone] = tally("postcodeArea", null);
+    let pRows = Object.entries(pC).sort((x, y) => y[1] - x[1]);
+    if (pRows.length > 10) { const rest = pRows.slice(10).reduce((s, r) => s + r[1], 0); pRows = pRows.slice(0, 10).concat([["Other areas", rest]]); }
+    $("pPostcode").innerHTML = barsHtml(pRows, pNone);
+    const answered = list.filter(r => r.ageBand || r.gender || r.postcodeArea).length;
+    $("profileNote").textContent = list.length ? `${answered} of ${list.length} response${list.length === 1 ? "" : "s"} include at least one "About you" answer.` : "No responses yet.";
+  }
+
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-view]");
+    if (!b) return;
+    selected = selected === b.dataset.view ? "" : b.dataset.view;
+    render();
+    $("respList").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("filter").addEventListener("change", (e) => { selected = e.target.value; render(); });
+
+  // ---------- CSV ----------
+  $("csv").addEventListener("click", () => {
+    const art = Object.fromEntries(artworks.map(a => [a.id, a]));
+    const cell = (v) => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const pad = (n) => String(n).padStart(2, "0");
+    const fmt = (d) => d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
+    const header = ["artwork_id", "title", "artist", "submitted", "liked", "rating", "comment", "comment_length", "age_band", "gender", "postcode_area", "visitor"];
+    const rows = filtered().map(r => [r.artworkId, art[r.artworkId]?.title || "", art[r.artworkId]?.artist || "", fmt(r.date),
+      r.liked ? 1 : 0, r.rating || "", r.comment || "", (r.comment || "").length,
+      AGE_LABELS[r.ageBand] || "", GENDER_LABELS[r.gender] || "", r.postcodeArea ? placeLabel(r.postcodeArea) : "", (r.uid || "").slice(0, 8)]);
+    const csv = "﻿" + [header, ...rows].map(row => row.map(cell).join(",")).join("\r\n");
+    const link = document.createElement("a");
+    const d = new Date();
+    link.download = `art-engage-${(me.museumName || "museum").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase()}-${selected || "all"}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.csv`;
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
+</script>
+</body>
+</html>

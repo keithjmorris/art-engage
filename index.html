@@ -603,6 +603,7 @@
           comment: state.comment.trim().slice(0, 1000),
           submittedAt: serverTimestamp()
         };
+        if (artwork.museumId) data.museumId = artwork.museumId;   // lets the museum see its own responses
         if (settings.aboutYou) {
           data.ageBand = state.ageBand;
           data.gender = state.gender;

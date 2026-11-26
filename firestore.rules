@@ -23,6 +23,30 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/admins/$(myEmail())));
     }
 
+    // Museum staff logins are listed in "museumUsers" (one document per email, naming their museum).
+    function museumUserPath() {
+      return /databases/$(database)/documents/museumUsers/$(myEmail());
+    }
+    function isMuseumUser() {
+      return signedIn() && myEmail() != '' && exists(museumUserPath());
+    }
+    function myMuseumId() {
+      return get(museumUserPath()).data.museumId;
+    }
+
+    // Museum logins: administrators add and remove them; each person can check their own entry.
+    match /museumUsers/{email} {
+      allow read: if isAdmin() || (signedIn() && email == myEmail());
+      allow create, update: if isAdmin()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(['museumId', 'museumName', 'addedAt', 'addedBy'])
+        && request.resource.data.museumId is string
+        && request.resource.data.museumId.size() > 0
+        && request.resource.data.museumName is string
+        && request.resource.data.addedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
     // Administrator list: only the owner can add or remove people.
     // Anyone signed in can check whether their own email is on it.
     match /admins/{email} {
@@ -41,14 +65,18 @@ service cloud.firestore {
     }
 
     // Visitor responses: one per visitor per artwork.
-    // Visitors can add or update their own; only administrators can read or delete.
+    // Visitors can add or update their own. Administrators read and delete all;
+    // museum logins read only responses tagged with their own museum.
     match /responses/{responseId} {
 
       // Optional "About you" answers (ageBand, gender, postcodeArea) must be blank or one of the listed choices.
+      // museumId, when given, must be the museum recorded on the artwork.
       function validResponse() {
         let d = request.resource.data;
         return d.keys().hasOnly(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt',
-                                 'ageBand', 'gender', 'postcodeArea'])
+                                 'ageBand', 'gender', 'postcodeArea', 'museumId'])
+          && (!('museumId' in d) || (d.museumId is string
+                && d.museumId == get(/databases/$(database)/documents/artworks/$(d.artworkId)).data.get('museumId', '')))
           && d.keys().hasAll(['artworkId', 'uid', 'liked', 'rating', 'comment', 'submittedAt'])
           && (!('ageBand' in d) || d.ageBand in ['', 'under16', '16-24', '25-34', '35-44', '45-54',
                                                   '55-64', '65-74', '75+', 'prefer-not'])
@@ -68,8 +96,14 @@ service cloud.firestore {
       }
 
       allow create: if signedIn() && validResponse();
-      allow update: if signedIn() && resource.data.uid == request.auth.uid && validResponse();
-      allow read, delete: if isAdmin();
+      // Visitors update their own; administrators may only add the museum tag to older responses.
+      allow update: if (signedIn() && resource.data.uid == request.auth.uid && validResponse())
+        || (isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['museumId'])
+            && request.resource.data.museumId is string);
+      allow delete: if isAdmin();
+      allow read: if isAdmin()
+        || (isMuseumUser() && resource.data.museumId == myMuseumId());
     }
 
     // Mailing-list sign-ups. Deliberately NOT linked to responses (no visitor ID),
